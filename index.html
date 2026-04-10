@@ -1,1954 +1,764 @@
 <!DOCTYPE html>
-<html lang="en"> 
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OceanHazard Reporter - Crowdsourced Ocean Hazard Reporting Platform</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <style>
-        :root {
-            --primary: #0A1628;
-            --secondary: #1E3A5F;
-            --accent: #00D9FF;
-            --warning: #FF6B35;
-            --danger: #E63946;
-            --success: #2EC4B6;
-            --background: #0D1B2A;
-            --surface: #1B2838;
-            --surface-glass: rgba(27, 40, 56, 0.7);
-            --text-primary: #E0E6ED;
-            --text-secondary: #8B9AAF;
-            --severity-1: #2EC4B6;
-            --severity-2: #2EC4B6;
-            --severity-3: #FFD166;
-            --severity-4: #FF6B35;
-            --severity-5: #E63946;
-        }
-
-        [data-theme="light"] {
-            --primary: #E0E6ED;
-            --secondary: #B8C5D6;
-            --background: #F0F4F8;
-            --surface: #FFFFFF;
-            --surface-glass: rgba(255, 255, 255, 0.8);
-            --text-primary: #0A1628;
-            --text-secondary: #4A5568;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Nunito', sans-serif;
-            background: var(--background);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-            transition: background 0.3s ease, color 0.3s ease;
-        }
-
-        /* Animated Background */
-        .ocean-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: linear-gradient(180deg, var(--background) 0%, var(--primary) 100%);
-            overflow: hidden;
-        }
-
-        .wave {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 200%;
-            height: 200px;
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,60 C150,120 350,0 600,60 C850,120 1050,0 1200,60 L1200,120 L0,120 Z' fill='%231E3A5F' fill-opacity='0.3'/%3E%3C/svg%3E") repeat-x;
-            animation: wave 20s linear infinite;
-        }
-
-        .wave:nth-child(2) {
-            bottom: 10px;
-            opacity: 0.5;
-            animation: wave 15s linear reverse infinite;
-        }
-
-        .wave:nth-child(3) {
-            bottom: 20px;
-            opacity: 0.3;
-            animation: wave 25s linear infinite;
-        }
-
-        @keyframes wave {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-
-        /* Header */
-        header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            background: var(--surface-glass);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(0, 217, 255, 0.1);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            animation: pulse-glow 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-glow {
-            0%, 100% { filter: drop-shadow(0 0 5px var(--accent)); }
-            50% { filter: drop-shadow(0 0 20px var(--accent)); }
-        }
-
-        nav {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
-
-        nav a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s ease;
-            position: relative;
-        }
-
-        nav a:hover {
-            color: var(--accent);
-        }
-
-        nav a::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--accent);
-            transition: width 0.3s ease;
-        }
-
-        nav a:hover::after {
-            width: 100%;
-        }
-
-        .theme-toggle {
-            background: var(--surface);
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            cursor: pointer;
-            font-family: 'Nunito', sans-serif;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .theme-toggle:hover {
-            background: var(--accent);
-            color: var(--primary);
-        }
-
-        /* Main Content */
-        main {
-            padding-top: 80px;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding-left: 2rem;
-            padding-right: 2rem;
-        }
-
-        /* Hero Section */
-        .hero {
-            text-align: center;
-            padding: 3rem 0;
-            position: relative;
-        }
-
-        .hero h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 900;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, var(--accent), #00FF88);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero p {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            max-width: 600px;
-            margin: 0 auto 2rem;
-        }
-
-        .stats-container {
-            display: flex;
-            justify-content: center;
-            gap: 3rem;
-            flex-wrap: wrap;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 1.5rem 2rem;
-            background: var(--surface-glass);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            border: 1px solid rgba(0, 217, 255, 0.2);
-            min-width: 150px;
-        }
-
-        .stat-number {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--accent);
-            display: block;
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Content Grid */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 1fr 1.5fr;
-            gap: 2rem;
-            margin: 2rem 0;
-        }
-
-        @media (max-width: 1024px) {
-            .content-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Glass Card */
-        .glass-card {
-            background: var(--surface-glass);
-            backdrop-filter: blur(12px);
-            border-radius: 20px;
-            border: 1px solid rgba(0, 217, 255, 0.15);
-            padding: 1.5rem;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .glass-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .card-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.25rem;
-            margin-bottom: 1.5rem;
-            color: var(--accent);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        /* Form Styles */
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: var(--surface);
-            border: 1px solid rgba(0, 217, 255, 0.2);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-family: 'Nunito', sans-serif;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 20px rgba(0, 217, 255, 0.2);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        /* Severity Slider */
-        .severity-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .severity-slider {
-            flex: 1;
-            -webkit-appearance: none;
-            height: 8px;
-            border-radius: 4px;
-            background: linear-gradient(90deg, var(--severity-1), var(--severity-3), var(--severity-5));
-            outline: none;
-        }
-
-        .severity-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 24px;
-            height: 24px; 
-            border-radius: 50%;
-            background: var(--text-primary);
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s ease;
-        }
-
-        .severity-slider::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        .severity-value {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            min-width: 40px;
-            text-align: center;
-        }
-
-        /* Submit Button */
-        .submit-btn {
-            width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, var(--accent), #00B4D8);
-            border: none;
-            border-radius: 12px;
-            color: var(--primary);
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.4);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .submit-btn.loading {
-            position: relative;
-            color: transparent;
-        }
-
-        .submit-btn.loading::after {
-            content: '';
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            top: 50%;
-            left: 50%;
-            margin: -12px 0 0 -12px;
-            border: 3px solid var(--primary);
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* AI Panel */
-        .ai-panel {
-            background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(0, 180, 216, 0.05));
-            border: 1px solid rgba(0, 217, 255, 0.3);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-        }
-
-        .ai-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-                                              
-        .ai-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #00D9FF, #00B4D8);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            animation: ai-pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes ai-pulse {
-            0%, 100% { box-shadow: 0 0 10px rgba(0, 217, 255, 0.4); }
-            50% { box-shadow: 0 0 25px rgba(0, 217, 255, 0.8); }
-        }
-
-        .ai-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1rem;
-            color: var(--accent);
-        }
-
-        .ai-subtitle {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .ai-insight {
-            background: var(--surface);
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .ai-insight-title {
-            font-weight: 700;
-            color: var(--accent);
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-        }
-
-        .ai-insight-text {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            line-height: 1.5;
-        }
-
-        .ai-confidence {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: 0.75rem;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .confidence-bar {
-            flex: 1;
-            height: 6px;
-            background: var(--surface);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .confidence-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--success), var(--accent));
-            border-radius: 3px;
-            transition: width 0.5s ease;
-        }
-
-        .ai-processing {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: var(--surface);
-            border-radius: 10px;
-        }
-
-        .ai-spinner {
-            width: 24px;
-            height: 24px;
-            border: 3px solid var(--surface);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        .ai-analyzing {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        /* AI Stats */
-        .ai-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .ai-stat {
-            background: var(--surface);
-            border-radius: 10px;
-            padding: 1rem;
-            text-align: center;
-        }
-
-        .ai-stat-value {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.25rem;
-            color: var(--accent);
-        }
-
-        .ai-stat-label {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Trend indicator */
-        .trend-up {
-            color: var(--danger);
-        }
-
-        .trend-down {
-            color: var(--success);
-        }
-
-        .trend-icon {
-            font-size: 0.75rem;
-        }
-
-        /* AI Chat */
-        .ai-chat {
-            margin-top: 1rem;
-        }
-
-        .ai-chat-input {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .ai-chat-input input {
-            flex: 1;
-            padding: 0.75rem;
-        }
-
-        .ai-chat-btn {
-            padding: 0.75rem 1.25rem;
-            background: var(--accent);
-            border: none;
-            border-radius: 10px;
-            color: var(--primary);
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .ai-chat-btn:hover {
-            transform: scale(1.05);
-        }
-
-        .ai-response {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: var(--surface);
-            border-radius: 10px;
-            border-left: 3px solid var(--accent);
-        }
-
-        /* Map Container */
-        .map-container {
-            position: relative;
-            height: 500px;
-            border-radius: 16px;
-            overflow: hidden;
-        }
-
-        #leafletMap, #hazardMap {
-            width: 100%;
-            height: 100%;
-            border-radius: 16px;
-        }
-
-        .map-legend {
-            position: absolute;
-            bottom: 1rem;
-            left: 1rem;
-            background: var(--surface-glass);
-            backdrop-filter: blur(8px);
-            padding: 1rem;
-            border-radius: 10px;
-            font-size: 0.75rem;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .legend-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .legend-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
-        .map-controls {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .map-filter {
-            background: var(--surface-glass);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(0, 217, 255, 0.2);
-            border-radius: 8px;
-            padding: 0.5rem;
-            color: var(--text-primary);
-            font-size: 0.875rem;
-            cursor: pointer;
-        }
-
-        /* Hazard Feed */
-        .hazard-feed {
-            margin: 2rem 0;
-        }
-
-        .feed-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .hazard-card {
-            background: var(--surface-glass);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            border: 1px solid rgba(0, 217, 255, 0.15);
-            padding: 1.25rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .hazard-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-            border-color: var(--accent);
-        }
-
-        .hazard-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .hazard-type {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .hazard-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-        }
-
-        .hazard-timestamp {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .hazard-severity {
-            display: flex;
-            gap: 4px;
-        }
-
-        .severity-bar {
-            width: 8px;
-            height: 20px;
-            border-radius: 2px;
-            background: var(--surface);
-            transition: background 0.3s ease;
-        }
-
-        .severity-bar.active {
-            background: var(--accent);
-        }
-
-        .hazard-location {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            margin-bottom: 0.75rem;
-        }
-
-.hazard-description {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            line-height: 1.5;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        /* Delete Button */
-        .delete-btn {
-            background: rgba(230, 57, 70, 0.2);
-            border: none;
-            color: var(--danger);
-            padding: 0.5rem 0.75rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .delete-btn:hover {
-            background: var(--danger);
-            color: white;
-            transform: scale(1.05);
-        }
-
-        .hazard-card-actions {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 0.75rem;
-        }
-
-        /* Alert Banner */
-        .alert-banner {
-            position: fixed;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, var(--danger), #c1121f);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            display: none;
-            align-items: center;
-            gap: 1rem;
-            z-index: 999;
-            animation: slideDown 0.5s ease;
-            box-shadow: 0 10px 30px rgba(230, 57, 70, 0.4);
-        }
-
-        .alert-banner.show {
-            display: flex;
-        }
-
-        @keyframes slideDown {
-            from {
-                transform: translateX(-50%) translateY(-100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(-50%) translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .alert-close {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            opacity: 0.8;
-            transition: opacity 0.3s ease;
-        }
-
-        .alert-close:hover {
-            opacity: 1;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        /* Toast Notification */
-        .toast {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: var(--surface);
-            border: 1px solid var(--success);
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            z-index: 1001;
-            animation: slideIn 0.3s ease;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .toast.success {
-            border-color: var(--success);
-        }
-
-        .toast.error {
-            border-color: var(--danger);
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        /* Footer */
-        footer {
-            background: var(--surface-glass);
-            backdrop-filter: blur(12px);
-            border-top: 1px solid rgba(0, 217, 255, 0.1);
-            padding: 2rem;
-            margin-top: 3rem;
-            text-align: center;
-        }
-
-        .footer-content {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .emergency-info {
-            color: var(--danger);
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-top: 1rem;
-        }
-
-        .footer-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .footer-links a:hover {
-            color: var(--accent);
-        }
-
-        .copyright {
-            margin-top: 1.5rem;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        /* Map Popup */
-        .map-popup {
-            position: absolute;
-            background: var(--surface);
-            border: 1px solid var(--accent);
-            border-radius: 10px;
-            padding: 1rem;
-            min-width: 200px;
-            display: none;
-            z-index: 100;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-        }
-
-        .map-popup.show {
-            display: block;
-            animation: fadeIn 0.2s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .popup-title {
-            font-weight: 700;
-            color: var(--accent);
-            margin-bottom: 0.5rem;
-        }
-
-        .popup-details {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            header {
-                padding: 1rem;
-            }
-
-            .logo {
-                font-size: 1.2rem;
-            }
-
-            nav {
-                gap: 1rem;
-            }
-
-            .hero h1 {
-                font-size: 1.75rem;
-            }
-
-            .stats-container {
-                gap: 1rem;
-            }
-
-            .stat-item {
-                min-width: 100px;
-                padding: 1rem;
-            }
-
-            .stat-number {
-                font-size: 1.5rem;
-            }
-
-            main {
-                padding-left: 1rem;
-                padding-right: 1rem;
-            }
-
-            .map-container {
-                height: 350px;
-            }
-        }
-
-        /* Mobile nav */
-        @media (max-width: 600px) {
-            nav {
-                display: none;
-            }
-        }
-
-        /* Severity Colors */
-        .severity-1 .severity-bar.active { background: var(--severity-1); }
-        .severity-2 .severity-bar.active { background: var(--severity-2); }
-        .severity-3 .severity-bar.active { background: var(--severity-3); }
-        .severity-4 .severity-bar.active { background: var(--severity-4); }
-        .severity-5 .severity-bar.active { background: var(--severity-5); }
-
-        /* Hazard Type Colors */
-        .hazard-icon.rip-current { background: rgba(0, 217, 255, 0.2); }
-        .hazard-icon.shark { background: rgba(230, 57, 70, 0.2); }
-        .hazard-icon.oil-spill { background: rgba(255, 107, 53, 0.2); }
-        .hazard-icon.marine-debris { background: rgba(139, 154, 175, 0.2); }
-        .hazard-icon.jellyfish { background: rgba(255, 209, 102, 0.2); }
-        .hazard-icon.tsunami { background: rgba(230, 57, 70, 0.3); }
-        .hazard-icon.other { background: rgba(46, 196, 182, 0.2); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OceanWatch — Hazard Reporting & Analysis Platform</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ocean-deep: #0a1628;
+    --ocean-mid: #0d2240;
+    --ocean-surface: #0e3d6e;
+    --wave: #1a6ca8;
+    --foam: #e8f4fd;
+    --danger: #e24b4a;
+    --warn: #ef9f27;
+    --safe: #1d9e75;
+    --text-bright: #e8f4fd;
+    --text-muted: #7ab3d4;
+    --border-line: rgba(122,179,212,0.2);
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--ocean-deep);
+    font-family: 'Syne', sans-serif;
+    color: var(--text-bright);
+    min-height: 100vh;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--ocean-mid);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-line);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: var(--wave);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 22px; height: 22px; fill: white; }
+  .logo-text { font-size: 17px; font-weight: 700; letter-spacing: 0.04em; }
+  .logo-sub { font-size: 10px; color: var(--text-muted); font-family: 'Space Mono', monospace; letter-spacing: 0.08em; }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+  .badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; padding: 4px 12px;
+    border-radius: 20px; font-weight: 700; letter-spacing: 0.06em;
+  }
+  .badge-live { background: rgba(29,158,117,0.2); color: #5DCAA5; border: 1px solid rgba(29,158,117,0.4); }
+  .badge-warn { background: rgba(239,159,39,0.2); color: #FAC775; border: 1px solid rgba(239,159,39,0.4); }
+  .topbar-time { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+  /* ── NAV ── */
+  .nav {
+    background: var(--ocean-mid);
+    border-bottom: 1px solid var(--border-line);
+    display: flex;
+    padding: 0 24px;
+    gap: 4px;
+    position: sticky;
+    top: 67px;
+    z-index: 99;
+  }
+  .nav-btn {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 500;
+    padding: 12px 18px;
+    background: none; border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    letter-spacing: 0.04em;
+    transition: all 0.2s;
+  }
+  .nav-btn.active { color: var(--text-bright); border-bottom-color: var(--wave); }
+  .nav-btn:hover:not(.active) { color: var(--text-bright); }
+
+  /* ── PANELS ── */
+  .panel { display: none; padding: 28px; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.3s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section-title {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em; color: var(--text-muted);
+    text-transform: uppercase; margin-bottom: 14px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ── METRICS ── */
+  .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .metric {
+    background: var(--ocean-mid);
+    border: 1px solid var(--border-line);
+    border-radius: 12px; padding: 18px;
+  }
+  .metric-val { font-size: 30px; font-weight: 700; font-family: 'Space Mono', monospace; line-height: 1; }
+  .metric-label { font-size: 12px; color: var(--text-muted); margin-top: 6px; letter-spacing: 0.04em; }
+  .metric-delta { font-size: 11px; margin-top: 8px; font-family: 'Space Mono', monospace; }
+  .delta-up { color: #e24b4a; }
+  .delta-down { color: #1d9e75; }
+
+  /* ── INCIDENT CARDS ── */
+  .incident-list { display: flex; flex-direction: column; gap: 10px; }
+  .incident-card {
+    background: var(--ocean-mid);
+    border: 1px solid var(--border-line);
+    border-radius: 12px; padding: 14px 18px;
+    display: flex; align-items: center; gap: 14px;
+    transition: border-color 0.2s;
+  }
+  .incident-card:hover { border-color: rgba(122,179,212,0.5); }
+  .incident-card.clickable { cursor: pointer; }
+  .incident-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 20px;
+  }
+  .inc-storm { background: rgba(226,75,74,0.15); }
+  .inc-oil { background: rgba(239,159,39,0.15); }
+  .inc-wave { background: rgba(26,108,168,0.15); }
+  .incident-info { flex: 1; }
+  .incident-title { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+  .incident-meta { font-size: 11px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+  .incident-sev {
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 6px;
+    font-family: 'Space Mono', monospace; flex-shrink: 0;
+  }
+  .sev-high { background: rgba(226,75,74,0.2); color: #F09595; }
+  .sev-med  { background: rgba(239,159,39,0.2); color: #FAC775; }
+  .sev-low  { background: rgba(29,158,117,0.2); color: #5DCAA5; }
+
+  /* ── MAP ── */
+  .map-container {
+    background: var(--ocean-mid);
+    border: 1px solid var(--border-line);
+    border-radius: 14px; overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .map-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-line);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .map-title { font-size: 14px; font-weight: 500; }
+  .map-legend { display: flex; gap: 16px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .map-body { padding: 16px; }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-full { grid-column: 1 / -1; }
+  .form-group { display: flex; flex-direction: column; gap: 7px; }
+  .form-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+  .form-input, .form-select, .form-textarea {
+    background: var(--ocean-mid);
+    border: 1px solid var(--border-line);
+    border-radius: 9px; padding: 10px 14px;
+    font-size: 13px; color: var(--text-bright);
+    font-family: 'Syne', sans-serif; width: 100%;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--wave); }
+  .form-select option { background: var(--ocean-deep); }
+  .form-textarea { min-height: 90px; resize: vertical; }
+  .severity-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sev-btn {
+    background: var(--ocean-mid);
+    border: 1px solid var(--border-line);
+    border-radius: 9px; padding: 12px;
+    text-align: center; cursor: pointer;
+    font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+    transition: all 0.2s; color: var(--text-muted);
+  }
+  .sev-btn:hover { border-color: var(--wave); color: var(--text-bright); }
+  .sev-btn.sel-high { background: rgba(226,75,74,0.2); border-color: #e24b4a; color: #F09595; }
+  .sev-btn.sel-med  { background: rgba(239,159,39,0.2); border-color: #ef9f27; color: #FAC775; }
+  .sev-btn.sel-low  { background: rgba(29,158,117,0.2); border-color: #1d9e75; color: #5DCAA5; }
+  .submit-btn {
+    background: var(--wave); border: none;
+    border-radius: 9px; padding: 14px 28px;
+    color: white; font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    width: 100%; margin-top: 8px;
+    letter-spacing: 0.04em; transition: opacity 0.2s;
+  }
+  .submit-btn:hover { opacity: 0.85; }
+  .success-msg {
+    background: rgba(29,158,117,0.15);
+    border: 1px solid rgba(29,158,117,0.4);
+    border-radius: 10px; padding: 16px;
+    text-align: center; font-size: 14px;
+    color: #5DCAA5; display: none; margin-top: 12px;
+  }
+
+  /* ── ANALYTICS ── */
+  .analytics-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .chart-card {
+    background: var(--ocean-mid);
+    border: 1px solid var(--border-line);
+    border-radius: 14px; padding: 20px;
+  }
+  .chart-card-title {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; color: var(--text-muted);
+    font-family: 'Space Mono', monospace; margin-bottom: 16px;
+  }
+  .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+  .bar-row { display: flex; align-items: center; gap: 12px; }
+  .bar-label { font-size: 11px; color: var(--text-muted); width: 90px; flex-shrink: 0; font-family: 'Space Mono', monospace; }
+  .bar-track { flex: 1; background: rgba(122,179,212,0.1); border-radius: 4px; height: 12px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+  .bar-val { font-size: 11px; font-family: 'Space Mono', monospace; color: var(--text-muted); width: 30px; text-align: right; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .donut-legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+  .donut-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .analytics-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  @media (max-width: 768px) {
+    .metrics-row { grid-template-columns: repeat(2, 1fr); }
+    .analytics-grid { grid-template-columns: 1fr; }
+    .analytics-bottom { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-full { grid-column: 1; }
+    .nav-btn { padding: 10px 12px; font-size: 11px; }
+    .topbar { padding: 12px 16px; }
+    .panel { padding: 16px; }
+  }
+</style>
 </head>
 <body>
-    <div class="ocean-bg">
-        <div class="wave"></div>
-        <div class="wave"></div>
-        <div class="wave"></div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 18c3-4 6-6 9-6s6 2 9 6H3zm0-6c2-3 5-5 9-5s7 2 9 5H3z"/></svg>
     </div>
-
-    <!-- Alert Banner -->
-    <div class="alert-banner" id="alertBanner">
-        <span>⚠️</span>
-        <span id="alertText">High severity hazard reported nearby!</span>
-        <button class="alert-close" onclick="dismissAlert()">&times;</button>
+    <div>
+      <div class="logo-text">OceanWatch</div>
+      <div class="logo-sub">Hazard Reporting &amp; Analysis Platform</div>
     </div>
+  </div>
+  <div class="topbar-right">
+    <span class="badge badge-live">● LIVE</span>
+    <span class="badge badge-warn">3 ACTIVE ALERTS</span>
+    <span class="topbar-time" id="clock"></span>
+  </div>
+</div>
 
-    <!-- Header -->
-    <header>
-        <a href="#" class="logo">
-            <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="20" cy="20" r="18" stroke="#00D9FF" stroke-width="2"/>
-                <path d="M8 25C8 25 12 18 20 18C28 18 32 25 32 25" stroke="#00D9FF" stroke-width="2" stroke-linecap="round"/>
-                <path d="M10 20C10 20 14 15 20 15C26 15 30 20 30 20" stroke="#00D9FF" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-                <circle cx="20" cy="12" r="3" fill="#00D9FF"/>
-            </svg>
-            OceanHazard
-        </a>
-        <nav>
-            <a href="#report">Report</a>
-            <a href="#map">Map</a>
-            <a href="#feed">Alerts</a>
-            <a href="#about">About</a>
-        </nav>
-        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
-    </header>
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-btn active" onclick="switchTab('dashboard', this)">Dashboard</button>
+  <button class="nav-btn" onclick="switchTab('map', this)">Live Map</button>
+  <button class="nav-btn" onclick="switchTab('report', this)">Report Hazard</button>
+  <button class="nav-btn" onclick="switchTab('analytics', this)">Analytics</button>
+</div>
 
-    <!-- Main Content -->
-    <main>
-        <!-- Hero Section -->
-        <section class="hero">
-            <h1>Crowdsourced Ocean Hazard Reporting</h1>
-            <p>Help keep beaches safe! Report ocean hazards in real-time and view community-submitted hazards on the interactive map.</p>
-            
-            <div class="stats-container">
-                <div class="stat-item">
-                    <span class="stat-number" id="totalHazards">0</span>
-                    <span class="stat-label">Total Reports</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number" id="activeHazards">0</span>
-                    <span class="stat-label">Active Hazards</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number" id="avgSeverity">0</span>
-                    <span class="stat-label">Avg Severity</span>
-                </div>
-            </div>
-        </section>
+<!-- ════════════════════════════════
+     PANEL: DASHBOARD
+════════════════════════════════ -->
+<div class="panel active" id="panel-dashboard">
+  <div class="section-title">Fleet Overview — Bay of Bengal Region</div>
 
-        <!-- Content Grid -->
-        <div class="content-grid">
-            <!-- Report Form -->
-            <div class="glass-card" id="report">
-                <h2 class="card-title">
-                    <span>📍</span> Report a Hazard
-                </h2>
-                <form id="hazardForm" onsubmit="submitHazard(event)">
-                    <div class="form-group">
-                        <label for="hazardType">Hazard Type</label>
-                        <select id="hazardType" required>
-                            <option value="">Select hazard type...</option>
-                            <option value="rip-current">🌊 Rip Current</option>
-                            <option value="shark">🦈 Shark Sighting</option>
-                            <option value="oil-spill">🛢️ Oil Spill</option>
-                            <option value="marine-debris">🗑️ Marine Debris</option>
-                            <option value="jellyfish">🪼 Jellyfish</option>
-                            <option value="tsunami">🌊 Tsunami Warning</option>
-                            <option value="other">⚠️ Other</option>
-                        </select>
-                    </div>
+  <div class="metrics-row">
+    <div class="metric">
+      <div class="metric-val" style="color:#F09595">3</div>
+      <div class="metric-label">Active Alerts</div>
+      <div class="metric-delta delta-up">▲ +2 since yesterday</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" style="color:#FAC775">12</div>
+      <div class="metric-label">Reports This Week</div>
+      <div class="metric-delta delta-down">▼ -3 vs last week</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" style="color:#5DCAA5">47</div>
+      <div class="metric-label">Vessels Tracked</div>
+      <div class="metric-delta delta-down">▼ +5 this month</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" style="color:#85B7EB">8.2m</div>
+      <div class="metric-label">Max Wave Height</div>
+      <div class="metric-delta delta-up">▲ Peak: 09:40 IST</div>
+    </div>
+  </div>
 
-                    <div class="form-group">
-                        <label>Severity Level (1-5)</label>
-                        <div class="severity-container">
-                            <input type="range" class="severity-slider" id="severity" min="1" max="5" value="3" oninput="updateSeverityDisplay()">
-                            <span class="severity-value" id="severityValue">3</span>
-                        </div>
-                    </div>
+  <div class="section-title">Recent Incidents</div>
+  <div class="incident-list">
+    <div class="incident-card">
+      <div class="incident-icon inc-storm">🌀</div>
+      <div class="incident-info">
+        <div class="incident-title">Cyclonic Depression — Zone 14N</div>
+        <div class="incident-meta">Reported 2h ago &nbsp;·&nbsp; 11.4°N, 80.3°E &nbsp;·&nbsp; Coast of Nagapattinam</div>
+      </div>
+      <span class="incident-sev sev-high">HIGH</span>
+    </div>
+    <div class="incident-card">
+      <div class="incident-icon inc-oil">🛢️</div>
+      <div class="incident-info">
+        <div class="incident-title">Oil Slick Spotted — Palk Strait</div>
+        <div class="incident-meta">Reported 5h ago &nbsp;·&nbsp; 10.1°N, 79.8°E &nbsp;·&nbsp; Approx 2km spread</div>
+      </div>
+      <span class="incident-sev sev-med">MED</span>
+    </div>
+    <div class="incident-card">
+      <div class="incident-icon inc-wave">🌊</div>
+      <div class="incident-info">
+        <div class="incident-title">Rogue Wave Event — Gulf of Mannar</div>
+        <div class="incident-meta">Reported 9h ago &nbsp;·&nbsp; 9.3°N, 78.2°E &nbsp;·&nbsp; Height est. 8.2m</div>
+      </div>
+      <span class="incident-sev sev-high">HIGH</span>
+    </div>
+    <div class="incident-card">
+      <div class="incident-icon inc-oil">🛢️</div>
+      <div class="incident-info">
+        <div class="incident-title">Chemical Discharge — Near Rameswaram</div>
+        <div class="incident-meta">Reported 1d ago &nbsp;·&nbsp; 9.2°N, 79.3°E &nbsp;·&nbsp; Source unknown</div>
+      </div>
+      <span class="incident-sev sev-low">LOW</span>
+    </div>
+  </div>
+</div>
 
-                    <div class="form-group">
-                        <label for="location">Location</label>
-                        <input type="text" id="location" placeholder="e.g., North Beach, near pier..." required>
-                    </div>
+<!-- ════════════════════════════════
+     PANEL: LIVE MAP
+════════════════════════════════ -->
+<div class="panel" id="panel-map">
+  <div class="map-container">
+    <div class="map-header">
+      <span class="map-title">Live Hazard Map — Tamil Nadu Coastal Waters</span>
+      <div class="map-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#e24b4a"></span>Storm/Cyclone</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#ef9f27"></span>Oil Spill</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#1a6ca8"></span>Rogue Wave</span>
+      </div>
+    </div>
+    <div class="map-body">
+      <svg viewBox="0 0 700 380" width="100%" style="border-radius:10px;background:linear-gradient(180deg,#071525 0%,#0a2040 50%,#0d3060 100%)">
+        <defs>
+          <radialGradient id="gr" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#e24b4a" stop-opacity="0.6"/><stop offset="100%" stop-color="#e24b4a" stop-opacity="0"/></radialGradient>
+          <radialGradient id="go" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ef9f27" stop-opacity="0.5"/><stop offset="100%" stop-color="#ef9f27" stop-opacity="0"/></radialGradient>
+          <radialGradient id="gb" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#1a6ca8" stop-opacity="0.6"/><stop offset="100%" stop-color="#1a6ca8" stop-opacity="0"/></radialGradient>
+        </defs>
+        <!-- Grid -->
+        <g stroke="rgba(122,179,212,0.08)" stroke-width="0.5">
+          <line x1="0" y1="76"  x2="700" y2="76"/>
+          <line x1="0" y1="152" x2="700" y2="152"/>
+          <line x1="0" y1="228" x2="700" y2="228"/>
+          <line x1="0" y1="304" x2="700" y2="304"/>
+          <line x1="140" y1="0" x2="140" y2="380"/>
+          <line x1="280" y1="0" x2="280" y2="380"/>
+          <line x1="420" y1="0" x2="420" y2="380"/>
+          <line x1="560" y1="0" x2="560" y2="380"/>
+        </g>
+        <!-- Coastline -->
+        <path d="M240,10 L228,50 L215,100 L208,150 L204,200 L208,260 L218,320 L230,370" stroke="rgba(122,179,212,0.6)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <!-- Land -->
+        <path d="M0,0 L240,10 L228,50 L215,100 L208,150 L204,200 L208,260 L218,320 L230,370 L0,370 Z" fill="rgba(12,40,70,0.7)"/>
+        <!-- Land labels -->
+        <text x="110" y="180" font-size="13" fill="rgba(122,179,212,0.5)" font-family="'Space Mono',monospace" text-anchor="middle">Tamil Nadu</text>
+        <text x="110" y="198" font-size="10" fill="rgba(122,179,212,0.3)" font-family="'Space Mono',monospace" text-anchor="middle">India</text>
+        <!-- Axis labels -->
+        <text x="280" y="14" font-size="9" fill="rgba(122,179,212,0.4)" font-family="'Space Mono',monospace" text-anchor="middle">80°E</text>
+        <text x="420" y="14" font-size="9" fill="rgba(122,179,212,0.4)" font-family="'Space Mono',monospace" text-anchor="middle">82°E</text>
+        <text x="560" y="14" font-size="9" fill="rgba(122,179,212,0.4)" font-family="'Space Mono',monospace" text-anchor="middle">84°E</text>
+        <text x="6" y="80"  font-size="9" fill="rgba(122,179,212,0.4)" font-family="'Space Mono',monospace">13°N</text>
+        <text x="6" y="156" font-size="9" fill="rgba(122,179,212,0.4)" font-family="'Space Mono',monospace">12°N</text>
+        <text x="6" y="232" font-size="9" fill="rgba(122,179,212,0.4)" font-family="'Space Mono',monospace">11°N</text>
+        <text x="6" y="308" font-size="9" fill="rgba(122,179,212,0.4)" font-family="'Space Mono',monospace">10°N</text>
+        <!-- HAZARD 1: Cyclone at ~11.4N 80.3E → x~300, y~240 -->
+        <circle cx="305" cy="235" r="40" fill="url(#gr)"/>
+        <circle cx="305" cy="235" r="14" fill="#e24b4a" opacity="0.95"/>
+        <circle cx="305" cy="235" r="22" fill="none" stroke="#e24b4a" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6">
+          <animateTransform attributeName="transform" type="rotate" from="0 305 235" to="360 305 235" dur="8s" repeatCount="indefinite"/>
+        </circle>
+        <text x="305" y="216" font-size="10" fill="#F09595" font-family="'Space Mono',monospace" text-anchor="middle" font-weight="700">CYCLONE</text>
+        <text x="305" y="264" font-size="9"  fill="rgba(240,149,149,0.7)" font-family="'Space Mono',monospace" text-anchor="middle">11.4°N 80.3°E</text>
+        <!-- HAZARD 2: Oil Spill at ~10.1N 79.8E → x~285, y~315 -->
+        <circle cx="290" cy="318" r="36" fill="url(#go)"/>
+        <ellipse cx="290" cy="318" rx="18" ry="10" fill="#ef9f27" opacity="0.85"/>
+        <text x="290" y="298" font-size="10" fill="#FAC775" font-family="'Space Mono',monospace" text-anchor="middle" font-weight="700">OIL SPILL</text>
+        <text x="290" y="344" font-size="9"  fill="rgba(250,199,117,0.7)" font-family="'Space Mono',monospace" text-anchor="middle">10.1°N 79.8°E</text>
+        <!-- HAZARD 3: Rogue Wave at ~9.3N 78.2E → x~235, y~348 -->
+        <circle cx="400" cy="345" r="38" fill="url(#gb)"/>
+        <circle cx="400" cy="345" r="13" fill="#1a6ca8" opacity="0.95"/>
+        <text x="400" y="324" font-size="10" fill="#85B7EB" font-family="'Space Mono',monospace" text-anchor="middle" font-weight="700">ROGUE WAVE</text>
+        <text x="400" y="371" font-size="9"  fill="rgba(133,183,235,0.7)" font-family="'Space Mono',monospace" text-anchor="middle">9.3°N 78.2°E</text>
+        <!-- Wave decorations -->
+        <g stroke="rgba(122,179,212,0.12)" stroke-width="1" fill="none">
+          <path d="M250,355 Q265,350 280,355 Q295,360 310,355 Q325,350 340,355 Q355,360 370,355 Q385,350 400,355 Q415,360 430,355 Q445,350 460,355 Q475,360 490,355 Q505,350 520,355"/>
+          <path d="M250,368 Q265,363 280,368 Q295,373 310,368 Q325,363 340,368 Q355,373 370,368 Q385,363 400,368 Q415,373 430,368 Q445,363 460,368 Q475,373 490,368 Q505,363 520,368"/>
+        </g>
+      </svg>
+    </div>
+  </div>
 
-                    <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea id="description" placeholder="Describe the hazard in detail..." required></textarea>
-                    </div>
+  <div class="section-title">Active Hazard Zones</div>
+  <div class="incident-list">
+    <div class="incident-card clickable" onclick="alert('Cyclonic Depression\n\nLocation: 11.4°N, 80.3°E\nRadius: ~40km\nMovement: NNW at 12 knots\nWind Speed: 65 km/h\nStatus: Intensifying\n\nSafety: All fishing vessels advised to return to port immediately.')">
+      <div class="incident-icon inc-storm">🌀</div>
+      <div class="incident-info">
+        <div class="incident-title">Zone 14N — Cyclonic Depression</div>
+        <div class="incident-meta">11.4°N, 80.3°E &nbsp;·&nbsp; Radius 40km &nbsp;·&nbsp; Moving NNW @ 12 knots</div>
+      </div>
+      <span class="incident-sev sev-high">HIGH</span>
+    </div>
+    <div class="incident-card clickable" onclick="alert('Oil Slick — Palk Strait\n\nLocation: 10.1°N, 79.8°E\nSpread: ~2km surface area\nWind Direction: SSE\nSource: Unknown vessel\n\nRisk: Avoid fishing in zone. Report any vessel in vicinity to Coast Guard.')">
+      <div class="incident-icon inc-oil">🛢️</div>
+      <div class="incident-info">
+        <div class="incident-title">Palk Strait — Oil Slick</div>
+        <div class="incident-meta">10.1°N, 79.8°E &nbsp;·&nbsp; Spread ~2km &nbsp;·&nbsp; Wind direction SSE</div>
+      </div>
+      <span class="incident-sev sev-med">MED</span>
+    </div>
+    <div class="incident-card clickable" onclick="alert('Rogue Wave Event — Gulf of Mannar\n\nLocation: 9.3°N, 78.2°E\nEstimated Height: 8.2m\nEvent Type: Isolated Rogue Wave\nDuration: ~30 minutes\n\nRisk: High danger to small fishing vessels. Keep clear of zone.')">
+      <div class="incident-icon inc-wave">🌊</div>
+      <div class="incident-info">
+        <div class="incident-title">Gulf of Mannar — Rogue Wave</div>
+        <div class="incident-meta">9.3°N, 78.2°E &nbsp;·&nbsp; Height est. 8.2m &nbsp;·&nbsp; Isolated event</div>
+      </div>
+      <span class="incident-sev sev-high">HIGH</span>
+    </div>
+  </div>
+</div>
 
-                    <button type="submit" class="submit-btn" id="submitBtn">Submit Report</button>
-                </form>
-                
-                <!-- AI Panel -->
-                <div class="ai-panel" id="aiPanel">
-                    <div class="ai-header">
-                        <div class="ai-icon">🤖</div>
-                        <div>
-                            <div class="ai-title">AI Hazard Analysis</div>
-                            <div class="ai-subtitle">Real-time intelligence powered by machine learning</div>
-                        </div>
-                    </div>
-                    
-                    <!-- AI Processing State -->
-                    <div class="ai-processing" id="aiProcessing" style="display: none;">
-                        <div class="ai-spinner"></div>
-                        <span class="ai-analyzing">Analyzing hazard patterns...</span>
-                    </div>
-                    
-                    <!-- AI Insights -->
-                    <div id="aiInsights">
-                        <div class="ai-insight">
-                            <div class="ai-insight-title">🔮 Risk Prediction</div>
-                            <div class="ai-insight-text" id="riskPrediction">
-                                Based on current data, rip current activity is predicted to increase by 23% in the next 2 hours due to tide patterns.
-                            </div>
-                            <div class="ai-confidence">
-                                <span>AI Confidence:</span>
-                                <div class="confidence-bar">
-                                    <div class="confidence-fill" style="width: 87%;"></div>
-                                </div>
-                                <span>87%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="ai-insight">
-                            <div class="ai-insight-title">📊 Pattern Analysis</div>
-                            <div class="ai-insight-text" id="patternAnalysis">
-                                Shark sighting reports have increased 15% this week. AI recommends increased vigilance during dawn and dusk hours.
-                            </div>
-                            <div class="ai-confidence">
-                                <span>AI Confidence:</span>
-                                <div class="confidence-bar">
-                                    <div class="confidence-fill" style="width: 92%;"></div>
-                                </div>
-                                <span>92%</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- AI Stats -->
-                    <div class="ai-stats-grid">
-                        <div class="ai-stat">
-                            <div class="ai-stat-value" id="aiRiskScore">72</div>
-                            <div class="ai-stat-label">Risk Score</div>
-                        </div>
-                        <div class="ai-stat">
-                            <div class="ai-stat-value" id="aiTrend">↑ 12%</div>
-                            <div class="ai-stat-label">Trend</div>
-                        </div>
-                    </div>
-                    
-                    <!-- AI Chat -->
-                    <div class="ai-chat">
-                        <div class="ai-chat-input">
-                            <input type="text" id="aiChatInput" placeholder="Ask AI about ocean conditions...">
-                            <button class="ai-chat-btn" onclick="askAI()">Ask</button>
-                        </div>
-                        <div class="ai-response" id="aiResponse" style="display: none;">
-                            <div id="aiResponseText"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!-- ════════════════════════════════
+     PANEL: REPORT HAZARD
+════════════════════════════════ -->
+<div class="panel" id="panel-report">
+  <div class="section-title">Submit a New Hazard Report</div>
 
-            <!-- Map -->
-            <div class="glass-card" id="map">
-                <h2 class="card-title">
-                    <span>🗺️</span> Hazard Map
-                </h2>
-                <div class="map-container">
-                    <canvas id="hazardMap"></canvas>
-                    <div class="map-controls">
-                        <select class="map-filter" id="mapFilter" onchange="filterMap()">
-                            <option value="all">All Types</option>
-                            <option value="rip-current">Rip Current</option>
-                            <option value="shark">Shark</option>
-                            <option value="oil-spill">Oil Spill</option>
-                            <option value="marine-debris">Debris</option>
-                            <option value="jellyfish">Jellyfish</option>
-                        </select>
-                    </div>
-                    <div class="map-legend">
-                        <div class="legend-item">
-                            <div class="legend-dot" style="background: #2EC4B6;"></div>
-                            <span>Low (1-2)</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-dot" style="background: #FFD166;"></div>
-                            <span>Medium (3)</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-dot" style="background: #E63946;"></div>
-                            <span>High (4-5)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <div style="background:var(--ocean-mid);border:1px solid var(--border-line);border-radius:14px;padding:24px;">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Vessel Name / ID</label>
+        <input class="form-input" type="text" placeholder="e.g. TN-FV-2241" id="vessel-id">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hazard Type</label>
+        <select class="form-select" id="hazard-type">
+          <option value="">Select hazard type...</option>
+          <option>Storm / Cyclone</option>
+          <option>Oil Spill / Pollution</option>
+          <option>Rogue Wave</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Latitude</label>
+        <input class="form-input" type="text" placeholder="e.g. 11.4200" id="lat-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Longitude</label>
+        <input class="form-input" type="text" placeholder="e.g. 80.3100" id="lon-input">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Nearest Landmark / Zone</label>
+        <input class="form-input" type="text" placeholder="e.g. 12km east of Nagapattinam harbour">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="desc-input" placeholder="Describe what you observed — size, intensity, direction of movement, other vessels affected..."></textarea>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Severity Level</label>
+        <div class="severity-row">
+          <div class="sev-btn" onclick="selectSev(this,'sel-high')">HIGH RISK</div>
+          <div class="sev-btn" onclick="selectSev(this,'sel-med')">MODERATE</div>
+          <div class="sev-btn" onclick="selectSev(this,'sel-low')">LOW RISK</div>
         </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date of Observation</label>
+        <input class="form-input" type="date" id="obs-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Time of Observation (IST)</label>
+        <input class="form-input" type="time" id="obs-time">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Reporter Contact (optional)</label>
+        <input class="form-input" type="text" placeholder="Phone number or radio call sign">
+      </div>
+    </div>
+    <button class="submit-btn" onclick="submitReport()">Submit Hazard Report</button>
+    <div class="success-msg" id="success-msg">
+      ✓ &nbsp; Report submitted successfully! Your report ID is <strong id="report-id"></strong>. Authorities have been notified.
+    </div>
+  </div>
+</div>
 
-        <!-- Hazard Feed -->
-        <section class="hazard-feed" id="feed">
-            <h2 class="card-title" style="margin-bottom: 1.5rem;">
-                <span>📋</span> Recent Reports
-            </h2>
-            <div class="feed-grid" id="hazardFeed">
-                <!-- Cards will be dynamically inserted here -->
-            </div>
-        </section>
-    </main>
+<!-- ════════════════════════════════
+     PANEL: ANALYTICS
+════════════════════════════════ -->
+<div class="panel" id="panel-analytics">
+  <div class="section-title">Hazard Analytics — Last 30 Days</div>
 
-    <!-- Footer -->
-    <footer id="about">
-        <div class="footer-content">
-            <div class="emergency-info">
-                🚨 Emergency: Call 911 for life-threatening situations
-            </div>
-            <p>OceanHazard Reporter is a community-driven platform for reporting and tracking ocean hazards. Together, we can make beaches safer for everyone.</p>
-            <div class="footer-links">
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
-                <a href="#">Contact Us</a>
-                <a href="#">API</a>
-            </div>
-            <div class="copyright">
-                © 2024 OceanHazard Reporter. Built with 💙 for ocean safety.
-            </div>
+  <div class="metrics-row">
+    <div class="metric">
+      <div class="metric-val" style="color:#F09595">38</div>
+      <div class="metric-label">Total Reports</div>
+      <div class="metric-delta delta-up">▲ +14% vs prior month</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" style="color:#FAC775">14</div>
+      <div class="metric-label">Oil Spill Reports</div>
+      <div class="metric-delta delta-up">▲ Most reported type</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" style="color:#5DCAA5">4.2h</div>
+      <div class="metric-label">Avg Response Time</div>
+      <div class="metric-delta delta-down">▼ Improved by 1.1h</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" style="color:#85B7EB">7</div>
+      <div class="metric-label">High-Risk Events</div>
+      <div class="metric-delta delta-up">▲ +3 vs last month</div>
+    </div>
+  </div>
+
+  <div class="analytics-grid">
+    <!-- Bar chart: Reports by hazard type -->
+    <div class="chart-card">
+      <div class="chart-card-title">Reports by Hazard Type</div>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <span class="bar-label">Oil Spill</span>
+          <div class="bar-track"><div class="bar-fill" id="bar1" style="width:0%;background:#ef9f27"></div></div>
+          <span class="bar-val">14</span>
         </div>
-    </footer>
-
-    <!-- Toast Notification -->
-    <div class="toast" id="toast" style="display: none;">
-        <span id="toastIcon">✅</span>
-        <span id="toastMessage">Report submitted successfully!</span>
+        <div class="bar-row">
+          <span class="bar-label">Storm/Cyclone</span>
+          <div class="bar-track"><div class="bar-fill" id="bar2" style="width:0%;background:#e24b4a"></div></div>
+          <span class="bar-val">12</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Rogue Wave</span>
+          <div class="bar-track"><div class="bar-fill" id="bar3" style="width:0%;background:#1a6ca8"></div></div>
+          <span class="bar-val">8</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Other</span>
+          <div class="bar-track"><div class="bar-fill" id="bar4" style="width:0%;background:#5DCAA5"></div></div>
+          <span class="bar-val">4</span>
+        </div>
+      </div>
+      <div style="margin-top:24px">
+        <div class="chart-card-title">Monthly Report Trend</div>
+        <div style="position:relative;height:140px">
+          <canvas id="trendChart" role="img" aria-label="Monthly ocean hazard report trend over 6 months">Jan 20, Feb 22, Mar 18, Apr 28, May 24, Jun 38</canvas>
+        </div>
+      </div>
     </div>
 
-    <script>
-        // Hazard data storage
-        let hazards = [];
-        const STORAGE_KEY = 'oceanHazardReports';
+    <!-- Donut chart: Severity split -->
+    <div class="chart-card">
+      <div class="chart-card-title">Severity Distribution</div>
+      <div style="position:relative;height:180px">
+        <canvas id="donutChart" role="img" aria-label="Severity distribution: High 18%, Medium 37%, Low 45%">High 7, Medium 14, Low 17</canvas>
+      </div>
+      <div class="donut-legend">
+        <div class="donut-legend-row"><span class="donut-dot" style="background:#e24b4a"></span>High Risk &nbsp;&nbsp; 7 reports (18%)</div>
+        <div class="donut-legend-row"><span class="donut-dot" style="background:#ef9f27"></span>Medium Risk &nbsp; 14 reports (37%)</div>
+        <div class="donut-legend-row"><span class="donut-dot" style="background:#1d9e75"></span>Low Risk &nbsp;&nbsp;&nbsp; 17 reports (45%)</div>
+      </div>
+    </div>
+  </div>
 
-        // Hazard type icons and names
-        const hazardTypes = {
-            'rip-current': { icon: '🌊', name: 'Rip Current', color: '#00D9FF' },
-            'shark': { icon: '🦈', name: 'Shark Sighting', color: '#E63946' },
-            'oil-spill': { icon: '🛢️', name: 'Oil Spill', color: '#FF6B35' },
-            'marine-debris': { icon: '🗑️', name: 'Marine Debris', color: '#8B9AAF' },
-            'jellyfish': { icon: '🪼', name: 'Jellyfish', color: '#FFD166' },
-            'tsunami': { icon: '🌊', name: 'Tsunami Warning', color: '#E63946' },
-            'other': { icon: '⚠️', name: 'Other', color: '#2EC4B6' }
-        };
+  <div class="analytics-bottom">
+    <!-- Reports by zone -->
+    <div class="chart-card">
+      <div class="chart-card-title">Reports by Coastal Zone</div>
+      <div class="bar-chart" style="margin-top:4px">
+        <div class="bar-row">
+          <span class="bar-label" style="width:110px">Nagapattinam</span>
+          <div class="bar-track"><div class="bar-fill" id="zbar1" style="width:0%;background:#1a6ca8"></div></div>
+          <span class="bar-val">11</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" style="width:110px">Palk Strait</span>
+          <div class="bar-track"><div class="bar-fill" id="zbar2" style="width:0%;background:#1a6ca8"></div></div>
+          <span class="bar-val">9</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" style="width:110px">Gulf of Mannar</span>
+          <div class="bar-track"><div class="bar-fill" id="zbar3" style="width:0%;background:#1a6ca8"></div></div>
+          <span class="bar-val">8</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" style="width:110px">Rameswaram</span>
+          <div class="bar-track"><div class="bar-fill" id="zbar4" style="width:0%;background:#1a6ca8"></div></div>
+          <span class="bar-val">6</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" style="width:110px">Chennai Coast</span>
+          <div class="bar-track"><div class="bar-fill" id="zbar5" style="width:0%;background:#1a6ca8"></div></div>
+          <span class="bar-val">4</span>
+        </div>
+      </div>
+    </div>
+    <!-- Response time chart -->
+    <div class="chart-card">
+      <div class="chart-card-title">Response Time by Severity (hrs)</div>
+      <div style="position:relative;height:180px">
+        <canvas id="responseChart" role="img" aria-label="Average response time by severity: High 1.8h, Medium 4.2h, Low 7.6h">High 1.8h, Medium 4.2h, Low 7.6h</canvas>
+      </div>
+    </div>
+  </div>
+</div>
 
-        // Initialize app
-        document.addEventListener('DOMContentLoaded', () => {
-            loadHazards();
-            renderHazardFeed();
-            renderMap();
-            updateStats();
-            loadThemePreference();
-        });
+<script>
+  // ── Clock ──
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Kolkata' }) + ' IST';
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
 
-        // Load hazards from localStorage
-        function loadHazards() {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEY);
-                if (stored) {
-                    hazards = JSON.parse(stored);
-                } else {
-                    // Seed with sample data
-                    hazards = [
-                        {
-                            id: 1,
-                            type: 'rip-current',
-                            severity: 4,
-                            location: 'Main Beach, near lifeguard tower 3',
-                            description: 'Strong rip current spotted. Several swimmers caught. Lifeguards actively assisting.',
-                            timestamp: Date.now() - 3600000,
-                            mapX: 0.3,
-                            mapY: 0.4
-                        },
-                        {
-                            id: 2,
-                            type: 'oil-spill',
-                            severity: 3,
-                            location: 'Harbor entrance, east side',
-                            description: 'Dark substance visible in water. Approximately 100 meters long. Ship may be source.',
-                            timestamp: Date.now() - 7200000,
-                            mapX: 0.7,
-                            mapY: 0.6
-                        },
-                        {
-                            id: 3,
-                            type: 'jellyfish',
-                            severity: 2,
-                            location: 'South Cove beach',
-                            description: 'Several jellyfish spotted near shore. Warning flag raised.',
-                            timestamp: Date.now() - 10800000,
-                            mapX: 0.5,
-                            mapY: 0.7
-                        },
-                        {
-                            id: 4,
-                            type: 'shark',
-                            severity: 5,
-                            location: 'Surf spot - Pipeline',
-                            description: 'Large shark sighted approximately 50 meters from shore. Beach closed immediately.',
-                            timestamp: Date.now() - 1800000,
-                            mapX: 0.6,
-                            mapY: 0.3
-                        }
-                    ];
-                    saveHazards();
-                }
-            } catch (e) {
-                console.warn('localStorage unavailable, using memory storage');
-                hazards = [];
-            }
+  // ── Tab switching ──
+  function switchTab(id, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + id).classList.add('active');
+    btn.classList.add('active');
+    if (id === 'analytics') initCharts();
+  }
+
+  // ── Severity selector ──
+  function selectSev(el, cls) {
+    document.querySelectorAll('.sev-btn').forEach(b => b.className = 'sev-btn');
+    el.classList.add(cls);
+  }
+
+  // ── Report submission ──
+  function submitReport() {
+    const vessel = document.getElementById('vessel-id').value.trim();
+    const type   = document.getElementById('hazard-type').value;
+    const lat    = document.getElementById('lat-input').value.trim();
+    const lon    = document.getElementById('lon-input').value.trim();
+    const desc   = document.getElementById('desc-input').value.trim();
+    if (!vessel || !type || !lat || !lon || !desc) {
+      alert('Please fill in all required fields before submitting.');
+      return;
+    }
+    const id = 'OW-' + Date.now().toString().slice(-6);
+    document.getElementById('report-id').textContent = id;
+    document.getElementById('success-msg').style.display = 'block';
+    document.getElementById('success-msg').scrollIntoView({ behavior: 'smooth' });
+    // reset form fields
+    ['vessel-id','lat-input','lon-input','desc-input'].forEach(f => document.getElementById(f).value = '');
+    document.getElementById('hazard-type').value = '';
+    document.querySelectorAll('.sev-btn').forEach(b => b.className = 'sev-btn');
+    setTimeout(() => document.getElementById('success-msg').style.display = 'none', 8000);
+  }
+
+  // ── Animate bars ──
+  function animateBars() {
+    const bars = [
+      { id:'bar1', w:100 }, { id:'bar2', w:86 }, { id:'bar3', w:57 }, { id:'bar4', w:29 },
+      { id:'zbar1', w:100 }, { id:'zbar2', w:82 }, { id:'zbar3', w:73 }, { id:'zbar4', w:55 }, { id:'zbar5', w:36 }
+    ];
+    bars.forEach(b => {
+      const el = document.getElementById(b.id);
+      if (el) setTimeout(() => el.style.width = b.w + '%', 100);
+    });
+  }
+
+  // ── Charts (lazy init) ──
+  let chartsInited = false;
+  function initCharts() {
+    if (chartsInited) return;
+    chartsInited = true;
+    animateBars();
+
+    // Trend line chart
+    new Chart(document.getElementById('trendChart'), {
+      type: 'line',
+      data: {
+        labels: ['Jan','Feb','Mar','Apr','May','Jun'],
+        datasets: [{
+          label: 'Reports',
+          data: [20, 22, 18, 28, 24, 38],
+          borderColor: '#1a6ca8',
+          backgroundColor: 'rgba(26,108,168,0.12)',
+          pointBackgroundColor: '#85B7EB',
+          pointRadius: 4,
+          fill: true, tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#7ab3d4', font: { size: 10 } }, grid: { color: 'rgba(122,179,212,0.08)' } },
+          y: { ticks: { color: '#7ab3d4', font: { size: 10 } }, grid: { color: 'rgba(122,179,212,0.08)' } }
         }
+      }
+    });
 
-        // Save hazards to localStorage
-        function saveHazards() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(hazards));
-            } catch (e) {
-                console.warn('Could not save to localStorage');
-            }
+    // Donut chart
+    new Chart(document.getElementById('donutChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['High Risk','Medium Risk','Low Risk'],
+        datasets: [{
+          data: [7, 14, 17],
+          backgroundColor: ['#e24b4a','#ef9f27','#1d9e75'],
+          borderColor: '#0d2240', borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    // Response time bar chart
+    new Chart(document.getElementById('responseChart'), {
+      type: 'bar',
+      data: {
+        labels: ['High Risk','Medium Risk','Low Risk'],
+        datasets: [{
+          label: 'Avg Response (hrs)',
+          data: [1.8, 4.2, 7.6],
+          backgroundColor: ['rgba(226,75,74,0.7)','rgba(239,159,39,0.7)','rgba(29,158,117,0.7)'],
+          borderRadius: 6, borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#7ab3d4', font: { size: 11 } }, grid: { color: 'rgba(122,179,212,0.08)' } },
+          y: { ticks: { color: '#7ab3d4', font: { size: 11 } }, grid: { color: 'rgba(122,179,212,0.08)' } }
         }
+      }
+    });
+  }
 
-        // Update severity display
-        function updateSeverityDisplay() {
-            const value = document.getElementById('severity').value;
-            const display = document.getElementById('severityValue');
-            display.textContent = value;
-            
-            // Color based on severity
-            const colors = ['#2EC4B6', '#2EC4B6', '#FFD166', '#FF6B35', '#E63946'];
-            display.style.color = colors[value - 1];
-        }
-
-        // Submit hazard report
-        function submitHazard(event) {
-            event.preventDefault();
-            
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.classList.add('loading');
-            submitBtn.disabled = true;
-
-            // Get form values
-            const hazard = {
-                id: Date.now(),
-                type: document.getElementById('hazardType').value,
-                severity: parseInt(document.getElementById('severity').value),
-                location: document.getElementById('location').value,
-                description: document.getElementById('description').value,
-                timestamp: Date.now(),
-                // Random map position for demo
-                mapX: 0.2 + Math.random() * 0.6,
-                mapY: 0.2 + Math.random() * 0.6
-            };
-
-            // Simulate network delay
-            setTimeout(() => {
-                hazards.unshift(hazard);
-                saveHazards();
-                
-                // Reset form
-                document.getElementById('hazardForm').reset();
-                document.getElementById('severity').value = 3;
-                updateSeverityDisplay();
-                
-                // Update UI
-                renderHazardFeed();
-                renderMap();
-                updateStats();
-                
-                // Show success toast
-                showToast('Report submitted successfully!', 'success');
-                
-                // Check for high severity
-                if (hazard.severity >= 4) {
-                    showAlert(hazard);
-                }
-                
-                submitBtn.classList.remove('loading');
-                submitBtn.disabled = false;
-            }, 1000);
-        }
-
-        // Show toast notification
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
-            const toastMessage = document.getElementById('toastMessage');
-            
-            icon.textContent = type === 'success' ? '✅' : '❌';
-            toastMessage.textContent = message;
-            toast.className = `toast ${type}`;
-            toast.style.display = 'flex';
-            
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
-        }
-
-        // Show alert banner
-        function showAlert(hazard) {
-            const banner = document.getElementById('alertBanner');
-            const text = document.getElementById('alertText');
-            text.textContent = `${hazardTypes[hazard.type].name} (Severity ${hazard.severity}) reported nearby!`;
-            banner.classList.add('show');
-        }
-
-        // Dismiss alert
-        function dismissAlert() {
-            document.getElementById('alertBanner').classList.remove('show');
-        }
-
-        // Render hazard feed
-        function renderHazardFeed() {
-            const feed = document.getElementById('hazardFeed');
-            
-            if (hazards.length === 0) {
-                feed.innerHTML = `
-                    <div class="empty-state" style="grid-column: 1 / -1;">
-                        <div class="empty-state-icon">🌊</div>
-                        <h3>No hazards reported yet</h3>
-                        <p>Be the first to report an ocean hazard!</p>
-                    </div>
-                `;
-                return;
-            }
-
-            feed.innerHTML = hazards.map(hazard => {
-                const type = hazardTypes[hazard.type];
-                const timeAgo = getTimeAgo(hazard.timestamp);
-                
-                return `
-                    <div class="hazard-card severity-${hazard.severity}">
-                        <div class="hazard-card-header">
-                            <div class="hazard-type">
-                                <div class="hazard-icon ${hazard.type}">${type.icon}</div>
-                                <span>${type.name}</span>
-                            </div>
-                            <div class="hazard-severity">
-                                ${[1,2,3,4,5].map(i => `<div class="severity-bar ${i <= hazard.severity ? 'active' : ''}" style="background: ${i <= hazard.severity ? (i <= 2 ? '#2EC4B6' : i <= 3 ? '#FFD166' : '#E63946') : ''}"></div>`).join('')}
-                            </div>
-                        </div>
-                        <div class="hazard-location">
-                            📍 ${hazard.location}
-                        </div>
-                        <div class="hazard-timestamp">${timeAgo}</div>
-                        <div class="hazard-description">${hazard.description}</div>
-                        <div class="hazard-card-actions">
-                            <button class="delete-btn" onclick="deleteHazard(${hazard.id})">
-                                🗑️ Delete
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // Delete hazard
-        function deleteHazard(id) {
-            if (!confirm('Are you sure you want to delete this hazard report?')) return;
-            
-            hazards = hazards.filter(h => h.id !== id);
-            saveHazards();
-            renderHazardFeed();
-            renderMap();
-            updateStats();
-            showToast('Report deleted successfully!', 'success');
-        }
-
-        // Get time ago string
-        function getTimeAgo(timestamp) {
-            const seconds = Math.floor((Date.now() - timestamp) / 1000);
-            
-            if (seconds < 60) return 'Just now';
-            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-            return `${Math.floor(seconds / 86400)}d ago`;
-        }
-
-        // Show hazard details (expandable)
-        function showHazardDetails(id) {
-            const hazard = hazards.find(h => h.id === id);
-            if (!hazard) return;
-            
-            const type = hazardTypes[hazard.type];
-            const date = new Date(hazard.timestamp).toLocaleString();
-            
-            alert(`${type.name}\nSeverity: ${hazard.severity}/5\nLocation: ${hazard.location}\nReported: ${date}\n\n${hazard.description}`);
-        }
-
-        // Ship data for demonstration
-        const ships = [
-            { name: 'Pacific Explorer', x: 0.15, y: 0.25, type: 'cargo', status: 'active' },
-            { name: 'Atlantic Trader', x: 0.55, y: 0.35, type: 'cargo', status: 'active' },
-            { name: 'Ocean Guardian', x: 0.75, y: 0.45, type: 'research', status: 'active' },
-            { name: 'Sea Navigator', x: 0.35, y: 0.55, type: 'tanker', status: 'active' },
-            { name: 'Marine Surveyor', x: 0.85, y: 0.30, type: 'research', status: 'active' },
-            { name: 'Coastal Carrier', x: 0.45, y: 0.70, type: 'cargo', status: 'active' },
-            { name: 'Deep Sea IV', x: 0.25, y: 0.40, type: 'tanker', status: 'active' },
-            { name: 'Arctic Voyager', x: 0.65, y: 0.20, type: 'research', status: 'active' }
-        ];
-
-        // World map simplified continent outlines
-        const continents = {
-            'North America': [
-                {x: 0.05, y: 0.28}, {x: 0.18, y: 0.25}, {x: 0.22, y: 0.30}, {x: 0.25, y: 0.35},
-                {x: 0.22, y: 0.45}, {x: 0.18, y: 0.50}, {x: 0.12, y: 0.48}, {x: 0.08, y: 0.42}, {x: 0.05, y: 0.35}
-            ],
-            'South America': [
-                {x: 0.18, y: 0.52}, {x: 0.25, y: 0.52}, {x: 0.28, y: 0.58}, {x: 0.26, y: 0.72},
-                {x: 0.22, y: 0.78}, {x: 0.18, y: 0.72}, {x: 0.16, y: 0.60}
-            ],
-            'Europe': [
-                {x: 0.42, y: 0.22}, {x: 0.55, y: 0.20}, {x: 0.58, y: 0.28}, {x: 0.52, y: 0.35},
-                {x: 0.45, y: 0.35}, {x: 0.42, y: 0.30}
-            ],
-            'Africa': [
-                {x: 0.42, y: 0.38}, {x: 0.58, y: 0.38}, {x: 0.62, y: 0.45}, {x: 0.58, y: 0.60},
-                {x: 0.50, y: 0.65}, {x: 0.42, y: 0.58}, {x: 0.40, y: 0.48}
-            ],
-            'Asia': [
-                {x: 0.58, y: 0.20}, {x: 0.85, y: 0.18}, {x: 0.95, y: 0.30}, {x: 0.90, y: 0.45},
-                {x: 0.78, y: 0.50}, {x: 0.65, y: 0.48}, {x: 0.60, y: 0.38}, {x: 0.58, y: 0.28}
-            ],
-            'Australia': [
-                {x: 0.78, y: 0.58}, {x: 0.92, y: 0.58}, {x: 0.95, y: 0.68}, {x: 0.88, y: 0.75},
-                {x: 0.78, y: 0.72}
-            ]
-        };
-
-        // Render map
-        function renderMap() {
-            const canvas = document.getElementById('hazardMap');
-            const ctx = canvas.getContext('2d');
-            
-            // Set canvas size
-            const container = canvas.parentElement;
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
-            
-            const width = canvas.width;
-            const height = canvas.height;
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, width, height);
-            
-            // Draw ocean background
-            const gradient = ctx.createLinearGradient(0, 0, 0, height);
-            gradient.addColorStop(0, '#0a2540');
-            gradient.addColorStop(0.5, '#1a3a5c');
-            gradient.addColorStop(1, '#0d2137');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, width, height);
-            
-            // Draw wave patterns
-            ctx.strokeStyle = 'rgba(0, 217, 255, 0.08)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < 6; i++) {
-                ctx.beginPath();
-                for (let x = 0; x < width; x += 10) {
-                    const y = height * 0.35 + i * 35 + Math.sin(x * 0.015 + Date.now() * 0.0008 + i) * 15;
-                    if (x === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.stroke();
-            }
-            
-            // Draw world map - continents
-            ctx.fillStyle = '#1a3d2e';
-            ctx.strokeStyle = '#2d5a45';
-            ctx.lineWidth = 2;
-            
-            Object.values(continents).forEach(continent => {
-                ctx.beginPath();
-                continent.forEach((point, index) => {
-                    const px = point.x * width;
-                    const py = point.y * height;
-                    if (index === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                });
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-            });
-            
-            // Draw grid lines (latitude/longitude)
-            ctx.strokeStyle = 'rgba(0, 217, 255, 0.06)';
-            ctx.lineWidth = 1;
-            for (let i = 1; i < 12; i++) {
-                ctx.beginPath();
-                ctx.moveTo(width * i / 12, 0);
-                ctx.lineTo(width * i / 12, height);
-                ctx.stroke();
-            }
-            for (let i = 1; i < 8; i++) {
-                ctx.beginPath();
-                ctx.moveTo(0, height * i / 10);
-                ctx.lineTo(width, height * i / 10);
-                ctx.stroke();
-            }
-            
-            // Draw ships
-            ships.forEach(ship => {
-                const sx = ship.x * width;
-                const sy = ship.y * height;
-                
-                // Ship glow
-                const shipGlow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 20);
-                shipGlow.addColorStop(0, 'rgba(255, 193, 7, 0.4)');
-                shipGlow.addColorStop(1, 'transparent');
-                ctx.fillStyle = shipGlow;
-                ctx.beginPath();
-                ctx.arc(sx, sy, 20, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Ship body
-                ctx.fillStyle = '#FFC107';
-                ctx.beginPath();
-                ctx.moveTo(sx - 10, sy - 5);
-                ctx.lineTo(sx + 10, sy - 5);
-                ctx.lineTo(sx + 8, sy + 8);
-                ctx.lineTo(sx - 8, sy + 8);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Ship mast
-                ctx.fillStyle = '#FFD54F';
-                ctx.fillRect(sx - 3, sy - 12, 6, 8);
-                
-                // Ship name
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                ctx.font = '9px Nunito, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(ship.name, sx, sy + 18);
-            });
-            
-            // Get filter
-            const filter = document.getElementById('mapFilter').value;
-            
-            // Draw hazard markers
-            hazards.forEach(hazard => {
-                if (filter !== 'all' && hazard.type !== filter) return;
-                
-                const x = hazard.mapX * width;
-                const y = hazard.mapY * height;
-                
-                let color;
-                if (hazard.severity <= 2) color = '#2EC4B6';
-                else if (hazard.severity === 3) color = '#FFD166';
-                else color = '#E63946';
-                
-                // Glow effect
-                const markerGradient = ctx.createRadialGradient(x, y, 0, x, y, 25);
-                markerGradient.addColorStop(0, color);
-                markerGradient.addColorStop(1, 'transparent');
-                ctx.fillStyle = markerGradient;
-                ctx.beginPath();
-                ctx.arc(x, y, 25, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Marker dot
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.arc(x, y, 8, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Icon
-                ctx.fillStyle = '#fff';
-                ctx.font = '10px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(hazardTypes[hazard.type].icon, x, y);
-            });
-            
-            // Draw legend
-            const legendX = 10;
-            const legendY = height - 70;
-            ctx.fillStyle = 'rgba(27, 40, 56, 0.9)';
-            ctx.fillRect(legendX, legendY, 120, 60);
-            ctx.strokeStyle = 'rgba(0, 217, 255, 0.3)';
-            ctx.strokeRect(legendX, legendY, 120, 60);
-            
-            ctx.fillStyle = '#FFC107';
-            ctx.beginPath();
-            ctx.moveTo(legendX + 15, legendY + 20);
-            ctx.lineTo(legendX + 25, legendY + 20);
-            ctx.lineTo(legendX + 23, legendY + 28);
-            ctx.lineTo(legendX + 17, legendY + 28);
-            ctx.closePath();
-            ctx.fill();
-            
-            ctx.fillStyle = '#E0E6ED';
-            ctx.font = '11px Nunito, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('Ships', legendX + 30, legendY + 26);
-            
-            ctx.fillStyle = '#2EC4B6';
-            ctx.beginPath();
-            ctx.arc(legendX + 20, legendY + 45, 6, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#E0E6ED';
-            ctx.fillText('Hazards', legendX + 32, legendY + 49);
-            
-            // Store canvas reference for click handling
-            canvas.hazardMarkers = hazards.map(h => ({
-                hazard: h,
-                x: h.mapX * width,
-                y: h.mapY * height,
-                radius: 20
-            }));
-            
-            canvas.shipMarkers = ships.map(s => ({
-                ship: s,
-                x: s.x * width,
-                y: s.y * height,
-                radius: 25
-            }));
-        }
-
-        // Filter map
-        function filterMap() {
-            renderMap();
-        }
-
-        // Map click handler
-        document.getElementById('hazardMap').addEventListener('click', function(e) {
-            const rect = this.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            const markers = this.hazardMarkers || [];
-            const filter = document.getElementById('mapFilter').value;
-            
-            for (const marker of markers) {
-                if (filter !== 'all' && marker.hazard.type !== filter) continue;
-                
-                const distance = Math.sqrt(Math.pow(x - marker.x, 2) + Math.pow(y - marker.y, 2));
-                if (distance <= marker.radius) {
-                    showMapPopup(marker.hazard, marker.x, marker.y);
-                    return;
-                }
-            }
-            
-            // Click elsewhere to close popup
-            document.getElementById('mapPopup').classList.remove('show');
-        });
-
-        // Show map popup
-        function showMapPopup(hazard, x, y) {
-            const popup = document.getElementById('mapPopup');
-            const title = document.getElementById('popupTitle');
-            const details = document.getElementById('popupDetails');
-            
-            const type = hazardTypes[hazard.type];
-            const timeAgo = getTimeAgo(hazard.timestamp);
-            
-            title.textContent = `${type.icon} ${type.name}`;
-            details.innerHTML = `
-                <p><strong>Severity:</strong> ${hazard.severity}/5</p>
-                <p><strong>Location:</strong> ${hazard.location}</p>
-                <p><strong>Reported:</strong> ${timeAgo}</p>
-                <p>${hazard.description}</p>
-            `;
-            
-            // Position popup
-            const mapContainer = popup.parentElement;
-            const containerRect = mapContainer.getBoundingClientRect();
-            
-            let popupX = x + 20;
-            let popupY = y - 20;
-            
-            // Keep within bounds
-            if (popupX + 220 > containerRect.width) popupX = x - 240;
-            if (popupY < 0) popupY = 10;
-            
-            popup.style.left = popupX + 'px';
-            popup.style.top = popupY + 'px';
-            popup.classList.add('show');
-        }
-
-        // Update stats
-        function updateStats() {
-            document.getElementById('totalHazards').textContent = hazards.length;
-            document.getElementById('activeHazards').textContent = hazards.filter(h => 
-                Date.now() - h.timestamp < 86400000 // Last 24 hours
-            ).length;
-            
-            const avg = hazards.length > 0 
-                ? (hazards.reduce((sum, h) => sum + h.severity, 0) / hazards.length).toFixed(1)
-                : 0;
-            document.getElementById('avgSeverity').textContent = avg;
-        }
-
-        // Theme toggle
-        function toggleTheme() {
-            const body = document.body;
-            const toggle = document.querySelector('.theme-toggle');
-            
-            if (body.getAttribute('data-theme') === 'light') {
-                body.setAttribute('data-theme', 'dark');
-                toggle.textContent = '🌙';
-                localStorage.setItem('theme', 'dark');
-            } else {
-                body.setAttribute('data-theme', 'light');
-                toggle.textContent = '☀️';
-                localStorage.setItem('theme', 'light');
-            }
-        }
-
-        // Load theme preference
-        function loadThemePreference() {
-            const saved = localStorage.getItem('theme');
-            if (saved === 'light') {
-                document.body.setAttribute('data-theme', 'light');
-                document.querySelector('.theme-toggle').textContent = '☀️';
-            }
-        }
-
-        // Re-render map on window resize
-        window.addEventListener('resize', () => {
-            renderMap();
-        });
-
-        // AI Functions
-        function askAI() {
-            const input = document.getElementById('aiChatInput');
-            const question = input.value.trim().toLowerCase();
-            
-            if (!question) return;
-            
-            const responseDiv = document.getElementById('aiResponse');
-            const responseText = document.getElementById('aiResponseText');
-            const processing = document.getElementById('aiProcessing');
-            const insights = document.getElementById('aiInsights');
-            
-            // Show processing
-            processing.style.display = 'flex';
-            insights.style.display = 'none';
-            
-            // Simulate AI processing delay
-            setTimeout(() => {
-                let answer = '';
-                
-                // Simple AI response logic
-                if (question.includes('rip current') || question.includes('rip')) {
-                    answer = 'Rip currents are most dangerous during high tide and when waves are large. If caught in a rip current, swim parallel to the shore rather than directly against the current. Current risk level is elevated due to recent reports.';
-                } else if (question.includes('shark')) {
-                    answer = 'Shark encounters are rare but can occur. Most incidents happen during dawn/dusk when sharks are most active. Avoid swimming near fishing boats or areas with bait fish. The AI has detected a slight increase in shark activity reports this week.';
-                } else if (question.includes('jellyfish')) {
-                    answer = 'Jellyfish stings can be painful but are rarely fatal. If stung, rinse with vinegar (not fresh water) and remove tentacles carefully. Some beaches have jellyfish nets during peak season.';
-                } else if (question.includes('safe') || question.includes('safety')) {
-                    answer = 'For maximum safety: swim only at lifeguarded beaches, follow warning flags, never swim alone, and stay informed about current conditions. The AI recommends checking the map for recent hazard reports before entering the water.';
-                } else if (question.includes('weather') || question.includes('wave')) {
-                    answer = 'Current wave conditions are moderate (2-4 feet). Wave activity is expected to increase by 15% over the next 6 hours according to our AI prediction model. Consider this when planning water activities.';
-                } else if (question.includes('oil') || question.includes('spill')) {
-                    answer = 'Oil spills can be harmful to skin and marine life. Avoid contact with oil-contaminated water and report any sightings immediately. The AI has tracked 3 recent oil spill reports in the region.';
-                } else {
-                    answer = 'I can provide information about ocean hazards like rip currents, shark sightings, jellyfish, oil spills, and marine debris. I can also give safety recommendations based on current conditions. Try asking about specific hazards or safety tips!';
-                }
-                
-                responseText.innerHTML = `<strong>AI Response:</strong> ${answer}`;
-                responseDiv.style.display = 'block';
-                processing.style.display = 'none';
-                insights.style.display = 'block';
-                
-                input.value = '';
-            }, 1500);
-        }
-
-        // AI Enter key handler
-        document.getElementById('aiChatInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                askAI();
-            }
-        });
-
-        // Simulate AI updates
-        function updateAIInsights() {
-            const riskScore = document.getElementById('aiRiskScore');
-            const trend = document.getElementById('aiTrend');
-            
-            // Calculate risk based on recent hazards
-            const recentHazards = hazards.filter(h => Date.now() - h.timestamp < 86400000);
-            if (recentHazards.length > 0) {
-                const avgSeverity = recentHazards.reduce((sum, h) => sum + h.severity, 0) / recentHazards.length;
-                const baseRisk = 40;
-                const riskScore_val = Math.min(99, Math.round(baseRisk + avgSeverity * 10));
-                riskScore.textContent = riskScore_val;
-                
-                // Trend calculation
-                const trend_val = Math.round((recentHazards.length - 2) * 8);
-                if (trend_val > 0) {
-                    trend.textContent = `↑ ${trend_val}%`;
-                    trend.style.color = '#E63946';
-                } else if (trend_val < 0) {
-                    trend.textContent = `↓ ${Math.abs(trend_val)}%`;
-                    trend.style.color = '#2EC4B6';
-                } else {
-                    trend.textContent = '→ 0%';
-                    trend.style.color = '#8B9AAF';
-                }
-            }
-        }
-
-        // Run AI updates when hazards change
-        const originalUpdateStats = updateStats;
-        updateStats = function() {
-            originalUpdateStats();
-            updateAIInsights();
-        };
-
-        // Initialize AI insights on load
-        setTimeout(updateAIInsights, 500);
-    </script>
+  // Pre-fill today's date/time on report form
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('obs-date').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  document.getElementById('obs-time').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+</script>
 </body>
 </html>
+
