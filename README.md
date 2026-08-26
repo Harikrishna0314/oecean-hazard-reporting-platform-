@@ -27,24 +27,10 @@ Image/evidence upload (if implemented)
 Centralized storage of reports
 Report monitoring and management
 Responsive web interface
+
 🔄 How It Works
-User
-  ↓
-Open Ocean Hazard Platform
-  ↓
-Select Hazard Type
-  ↓
-Enter Incident Details
-  ↓
-Add Location / Evidence
-  ↓
-Submit Report
-  ↓
-System Stores Report
-  ↓
-Authorities / Administrators
-  ↓
-Monitor & Respond
+The end-to-end operational workflow begins when a user accesses the Ocean Hazard Platform and selects the specific type of ocean hazard they are encountering. Next, the user inputs key incident details alongside exact location data or photographic evidence before submitting the report. Once received, the platform processes and stores the submitted incident information in a centralized database, where environmental authorities and administrators can immediately access, monitor, and coordinate a response to the report.
+
 🛠️ Technologies Used
 
 Add or remove technologies based on your actual implementation:
@@ -54,24 +40,9 @@ Backend: Python / Flask / Django / Node.js
 Database: MySQL / MongoDB / Firebase
 Maps: Google Maps API / Leaflet (if used)
 Tools: Git, GitHub, VS Code
-📂 Project Structure
-Ocean-Hazard-Reporting/
-│
-├── frontend/
-│   ├── index.html
-│   ├── style.css
-│   └── script.js
-│
-├── backend/
-│   └── app.py
-│
-├── database/
-│   └── database.sql
-│
-├── images/
-│
-├── README.md
-└── requirements.txt
+
+project structre 
+The project's directory is organized to maintain a clear separation of concerns, housing the user-facing web interface inside the `frontend/` directory, the server and API logic within `backend/`, and all schema or script resources in `database/`. Static assets like user uploads or UI graphics are kept in `images/`, while top-level files such as `requirements.txt` and `README.md` manage dependencies and documentation for overall platform setup.
 
 Modify the structure according to your actual project.
 
