@@ -13,6 +13,8 @@ services:
     envVars:
       - key: APP_SECRET
         generateValue: true
+      - key: ADMIN_PASSWORD
+        generateValue: true
       - key: DB_PATH
         value: /tmp/oceanguard/oceanguard.db
       - key: CORS_ORIGINS
