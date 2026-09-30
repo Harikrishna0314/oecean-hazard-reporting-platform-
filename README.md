@@ -30,6 +30,9 @@ No paid API key is required by this repository.
 
 ## Render
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Harikrishna0314/oecean-hazard-reporting-platform-)
+
+
 The root render.yaml defines:
 
 - free Python web service

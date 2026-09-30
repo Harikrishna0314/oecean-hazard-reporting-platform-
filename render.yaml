@@ -4,6 +4,9 @@ services:
     runtime: python
     plan: free
     region: singapore
+    repo: https://github.com/Harikrishna0314/oecean-hazard-reporting-platform-
+    branch: main
+    autoDeployTrigger: checksPass
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz
