@@ -5,7 +5,6 @@ import os
 import secrets
 import sqlite3
 
-from datetime import datetime, timedelta, timezone
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -253,156 +252,27 @@ def init_db() -> None:
         users,
     )
 
-    admin_row = cursor.execute(
-        "SELECT id FROM users WHERE username = 'admin'"
-    ).fetchone()
-    admin_id = admin_row["id"] if admin_row else 1
-
-    cursor.execute("SELECT COUNT(*) FROM reports")
-    report_count = cursor.fetchone()[0]
-
-    if report_count == 0:
-        now = datetime.now(timezone.utc)
-        demo_reports = [
-            (
-                "OW-DEMO-000001",
-                "Fuel Oil Slick — Chennai Approach",
-                "oil_spill",
-                "Demonstration record: a broad surface sheen was observed in the shipping approach zone. This is seeded data for the final-year project demo.",
-                "High",
-                "Pending",
-                13.0500,
-                80.3500,
-                "Chennai East Coast",
-                2,
-                "Marine Watcher",
-                "",
-                "demo",
-                1,
-                12,
-                "Demo record. Verify with an authorised maritime authority before action.",
-                (now - timedelta(hours=2)).isoformat(),
-            ),
-            (
-                "OW-DEMO-000002",
-                "High Swell — Mahabalipuram Offshore",
-                "high_waves",
-                "Demonstration record: elevated swell conditions affecting small-craft operations in the coastal zone.",
-                "Medium",
-                "Verified",
-                12.6200,
-                80.1900,
-                "Mahabalipuram Offshore",
-                2,
-                "Marine Watcher",
-                "",
-                "demo",
-                1,
-                18,
-                "Demo verification entry.",
-                (now - timedelta(hours=5)).isoformat(),
-            ),
-            (
-                "OW-DEMO-000003",
-                "Cyclonic Weather Cell — Nagapattinam Sector",
-                "storm",
-                "Demonstration record representing an observed storm-related hazard. External model data is shown separately.",
-                "Critical",
-                "Pending",
-                10.7600,
-                79.8400,
-                "Nagapattinam Offshore",
-                2,
-                "Marine Watcher",
-                "",
-                "demo",
-                1,
-                7,
-                "Demo record. Not an official warning.",
-                (now - timedelta(hours=9)).isoformat(),
-            ),
-            (
-                "OW-DEMO-000004",
-                "Floating Plastic Patch — Palk Strait",
-                "pollution",
-                "Demonstration record of floating plastic and fishing-line waste reported near a coastal fishing corridor.",
-                "Medium",
-                "Verified",
-                9.9600,
-                79.8600,
-                "Palk Strait",
-                2,
-                "Marine Watcher",
-                "",
-                "demo",
-                1,
-                21,
-                "Demo verification entry.",
-                (now - timedelta(days=1)).isoformat(),
-            ),
-            (
-                "OW-DEMO-000005",
-                "Fishing Gear Entanglement Risk — Gulf of Mannar",
-                "marine_animals",
-                "Demonstration wildlife-risk record for an entanglement-prone area.",
-                "High",
-                "Resolved",
-                9.2200,
-                79.0800,
-                "Gulf of Mannar",
-                2,
-                "Marine Watcher",
-                "",
-                "demo",
-                1,
-                31,
-                "Demo resolution entry.",
-                (now - timedelta(days=2)).isoformat(),
-            ),
-        ]
-
-        cursor.executemany(
-            """
-            INSERT INTO reports
-            (report_code, title, category_id, description, severity, status,
-             latitude, longitude, location_name, user_id, author_name,
-             reporter_contact, source, is_demo, upvotes, admin_notes,
-             observed_at, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            [item + (item[-1], item[-1]) for item in demo_reports],
-        )
-
-        cursor.execute(
-            """
-            INSERT INTO vessel_locations
-            (vessel_id, user_id, latitude, longitude, accuracy,
-             speed_knots, heading, is_demo)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-            """,
-            ("DEMO-VESSEL-01", admin_id, 13.0500, 80.3500, 10, 6.4, 72),
-        )
-
-        cursor.executemany(
-            """
-            INSERT INTO notifications (user_id, title, message, type, is_read)
-            VALUES (?, ?, ?, ?, 0)
-            """,
-            [
-                (
-                    admin_id,
-                    "System ready",
-                    "OceanGuard demo data has been initialised.",
-                    "success",
-                ),
-                (
-                    admin_id,
-                    "Live tracking",
-                    "Location sharing is opt-in and stale positions expire from the live map.",
-                    "info",
-                ),
-            ],
-        )
+    # Remove legacy seeded demonstration content from earlier releases.
+    # Real community submissions are preserved; only rows explicitly marked as
+    # demo/sample data are removed. New installs start with an empty report feed.
+    cursor.execute(
+        """
+        DELETE FROM reports
+        WHERE COALESCE(is_demo, 0) = 1
+           OR source = 'demo'
+           OR report_code LIKE 'OW-DEMO-%'
+        """
+    )
+    cursor.execute(
+        "DELETE FROM vessel_locations WHERE COALESCE(is_demo, 0) = 1"
+    )
+    cursor.execute(
+        """
+        DELETE FROM notifications
+        WHERE lower(title) LIKE '%demo%'
+           OR lower(message) LIKE '%demo data%'
+        """
+    )
 
     cursor.execute(
         """
