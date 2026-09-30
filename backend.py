@@ -29,6 +29,14 @@ from pydantic import BaseModel, Field
 import database
 from database import get_db_connection, hash_password, verify_password
 
+# Fail closed on Render rather than silently using development credentials.
+if os.getenv("RENDER") and (
+    not os.getenv("APP_SECRET") or not os.getenv("ADMIN_PASSWORD")
+):
+    raise RuntimeError(
+        "Set APP_SECRET and ADMIN_PASSWORD in the Render environment before startup."
+    )
+
 database.init_db()
 
 BASE_DIR = Path(__file__).resolve().parent
