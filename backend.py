@@ -1046,10 +1046,80 @@ async def get_weather(latitude: float = Query(...), longitude: float = Query(...
             "current": payload.get("current", {}),
         }
     except httpx.HTTPError as exc:
-        LOGGER.exception("Open-Meteo weather request failed: %s", exc)
+        LOGGER.warning(
+            "Open-Meteo weather unavailable (%s); trying MET Norway fallback",
+            exc,
+        )
+
+    # Open-Meteo's public weather endpoint can return 429 when the Render
+    # egress IP has temporarily reached its free-tier rate limit. MET Norway
+    # provides global location forecasts without an API key and requires an
+    # identifying User-Agent.
+    fallback_url = (
+        "https://api.met.no/weatherapi/locationforecast/2.0/compact"
+    )
+    fallback_params = {
+        "lat": round(latitude, 4),
+        "lon": round(longitude, 4),
+    }
+    try:
+        async with httpx.AsyncClient(timeout=12, trust_env=False) as client:
+            response = await client.get(
+                fallback_url,
+                params=fallback_params,
+                headers={
+                    "Accept": "application/json",
+                    "User-Agent": (
+                        "OceanGuard/2.0 "
+                        "(https://oceanguard-hazard-platform.onrender.com)"
+                    ),
+                },
+            )
+            response.raise_for_status()
+            met_payload = response.json()
+
+        series = met_payload.get("properties", {}).get("timeseries", [])
+        if not series:
+            raise ValueError("MET Norway returned no forecast timeseries")
+
+        details = series[0].get("data", {}).get("instant", {}).get("details", {})
+        next_hour = (
+            series[0]
+            .get("data", {})
+            .get("next_1_hours", {})
+            .get("details", {})
+        )
+
+        wind_ms = details.get("wind_speed")
+        gust_ms = details.get("wind_speed_of_gust")
+        current = {
+            "time": series[0].get("time"),
+            "temperature_2m": details.get("air_temperature"),
+            "apparent_temperature": None,
+            "relative_humidity_2m": details.get("relative_humidity"),
+            "precipitation": next_hour.get("precipitation_amount"),
+            "weather_code": None,
+            "wind_speed_10m": round(wind_ms * 3.6, 1)
+            if isinstance(wind_ms, (int, float))
+            else None,
+            "wind_gusts_10m": round(gust_ms * 3.6, 1)
+            if isinstance(gust_ms, (int, float))
+            else None,
+            "wind_direction_10m": details.get("wind_from_direction"),
+        }
+        return {
+            "source": "MET Norway Locationforecast",
+            "licence": "MET Norway data",
+            "latitude": latitude,
+            "longitude": longitude,
+            "timezone": "UTC",
+            "current": current,
+        }
+    except (httpx.HTTPError, ValueError, TypeError) as exc:
+        LOGGER.exception("MET Norway weather fallback failed: %s", exc)
         raise HTTPException(
             status_code=502,
-            detail="Weather provider unavailable",
+            detail="Weather providers unavailable",
         ) from exc
 
 
