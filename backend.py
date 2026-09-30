@@ -203,7 +203,7 @@ async def fetch_open_meteo(url: str, params: dict, cache_key: str) -> dict:
     if cached and now - cached[0] < 300:
         return cached[1]
 
-    async with httpx.AsyncClient(timeout=12) as client:
+    async with httpx.AsyncClient(timeout=12, trust_env=False) as client:
         response = await client.get(
             url,
             params=params,
