@@ -152,3 +152,54 @@ def test_frontend_contract():
 
     assert "tile.openstreetmap.org" in html
     assert "google.com/maps" in html
+
+def test_external_weather_and_marine_contract(client, monkeypatch):
+    import backend
+
+    async def fake_fetch(url, params, cache_key):
+        if "marine-api.open-meteo.com" in url:
+            assert params["cell_selection"] == "sea"
+            return {
+                "latitude": 11.15,
+                "longitude": 79.95,
+                "timezone": "Asia/Kolkata",
+                "current": {
+                    "wave_height": 1.2,
+                    "wave_direction": 180,
+                    "wave_period": 6.5,
+                    "wind_wave_height": 0.8,
+                    "swell_wave_height": 0.9,
+                    "sea_surface_temperature": 29.1,
+                    "ocean_current_velocity": 0.4,
+                    "ocean_current_direction": 90,
+                },
+                "hourly": {
+                    "wave_height": [1.2, 1.8, 1.5],
+                    "swell_wave_height": [0.9, 1.1, 1.0],
+                },
+            }
+        assert url == "https://api.open-meteo.com/v1/forecast"
+        return {
+            "latitude": 11.15,
+            "longitude": 79.95,
+            "timezone": "Asia/Kolkata",
+            "current": {
+                "temperature_2m": 30.2,
+                "wind_speed_10m": 18.0,
+                "wind_gusts_10m": 29.0,
+            },
+        }
+
+    monkeypatch.setattr(backend, "fetch_open_meteo", fake_fetch)
+
+    weather = client.get("/api/weather?latitude=11.15&longitude=79.95")
+    assert weather.status_code == 200
+    assert weather.json()["current"]["wind_speed_10m"] == 18.0
+
+    marine = client.get("/api/marine?latitude=11.15&longitude=79.95")
+    assert marine.status_code == 200
+    data = marine.json()
+    assert data["current"]["wave_height"] == 1.2
+    assert data["current"]["next_12h_wave_peak_m"] == 1.8
+    assert data["current"]["next_12h_swell_peak_m"] == 1.1
+
