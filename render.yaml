@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: oceanguard-hazard-platform
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: APP_SECRET
+        generateValue: true
+      - key: DB_PATH
+        value: /tmp/oceanguard/oceanguard.db
+      - key: CORS_ORIGINS
+        value: "*"

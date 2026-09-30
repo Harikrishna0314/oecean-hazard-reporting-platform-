@@ -1,71 +1,130 @@
-🌊 Ocean Hazard Reporting Platform
+# OceanGuard — Ocean Hazard Reporting Platform
 
-A web-based environmental monitoring platform that enables users to report ocean hazards such as oil spills, plastic pollution, and unsafe marine conditions. The platform helps improve incident reporting, supports environmental monitoring, and provides a centralized way to collect information about ocean-related hazards.
+OceanGuard is a final-year educational project for community-driven ocean hazard reporting, geospatial awareness and near-real-time vessel position sharing.
 
-🎯 Objectives
-Enable users to report ocean hazards quickly.
-Improve the collection of marine environmental data.
-Provide a centralized platform for hazard reports.
-Help identify and monitor potentially dangerous ocean conditions.
-Support faster awareness and response to environmental incidents.
-🚨 Types of Hazards
+## Product scope
 
-The platform can be used to report:
+The main branch is now a single deployable FastAPI product. The previous repository had a disconnected visual mock-up named Frontend while the backend served a non-existent static/index.html path. That mismatch is removed.
 
-🛢️ Oil spills
-🧴 Plastic pollution
-🌊 Unsafe marine conditions
-🗑️ Marine debris
-⚠️ Other environmental hazards
-✨ Features
-User-friendly hazard reporting interface
-Hazard category selection
-Description of reported incidents
-Location-based incident reporting
-Date and time of reporting
-Image/evidence upload (if implemented)
-Centralized storage of reports
-Report monitoring and management
-Responsive web interface
+Current capabilities:
 
-🔄 How It Works
-The end-to-end operational workflow begins when a user accesses the Ocean Hazard Platform and selects the specific type of ocean hazard they are encountering. Next, the user inputs key incident details alongside exact location data or photographic evidence before submitting the report. Once received, the platform processes and stores the submitted incident information in a centralized database, where environmental authorities and administrators can immediately access, monitor, and coordinate a response to the report.
+- Interactive Tamil Nadu coastal map using Leaflet and OpenStreetMap.
+- Device geolocation through browser permission.
+- Opt-in vessel tracking with configurable update interval and stale-position cutoff.
+- Hazard reports stored in SQLite and shown in the live feed and map.
+- Optional evidence photo upload with type and 5 MB size validation.
+- Dynamic analytics from the same database.
+- Administrator Control Room for report verification and user management.
+- Weather and marine conditions from Open-Meteo with no API key.
+- Google Maps deep-links for coordinates without embedding the paid Google Maps JavaScript API.
+- Render Blueprint for a free web service.
+- GitHub Actions CI for main and pull requests.
 
-🛠️ Technologies Used
+## Zero-cost architecture
 
-Add or remove technologies based on your actual implementation:
+The embedded map uses Leaflet with OpenStreetMap tiles. Google Maps JavaScript is intentionally not used because a production Maps JavaScript integration requires an API key and billing. Every report and vessel marker has an Open in Google Maps link instead.
 
-Frontend: HTML, CSS, JavaScript
-Backend: Python / Flask / Django / Node.js
-Database: MySQL / MongoDB / Firebase
-Maps: Google Maps API / Leaflet (if used)
-Tools: Git, GitHub, VS Code
+Weather and marine conditions are loaded from Open-Meteo. Its free API is available for non-commercial use without an API key, with usage limits and attribution requirements. The application labels the information as model data and does not present it as an official emergency warning.
 
-project structre 
-The project's directory is organized to maintain a clear separation of concerns, housing the user-facing web interface inside the `frontend/` directory, the server and API logic within `backend/`, and all schema or script resources in `database/`. Static assets like user uploads or UI graphics are kept in `images/`, while top-level files such as `requirements.txt` and `README.md` manage dependencies and documentation for overall platform setup.
+No paid API key is required by this repository.
 
-Modify the structure according to your actual project.
+## Render
 
-📋 Reporting Process
-User accesses the platform.
-User selects the type of ocean hazard.
-User provides details about the incident.
-User adds the location of the incident.
-User can upload supporting images if available.
-User submits the report.
-The system stores the incident information.
-Administrators can monitor and manage submitted reports.
-🌍 Impact
+The root render.yaml defines:
 
-The platform aims to improve ocean environmental monitoring by making it easier for individuals to report potentially harmful incidents. Centralizing these reports can help organizations identify hazard-prone areas and improve environmental awareness and response.
+- free Python web service
+- pip install from requirements.txt
+- uvicorn backend:app
+- /healthz health check
+- generated APP_SECRET
+- SQLite at /tmp/oceanguard/oceanguard.db
 
-🚀 Future Enhancements
-🗺️ Interactive real-time hazard map
-📱 Mobile application
-🤖 AI-based image detection for oil spills and plastic pollution
-📍 GPS-based automatic location detection
-🔔 Real-time alerts for nearby hazards
-📊 Environmental analytics dashboard
-👥 Authority/admin management portal
-☁️ Cloud-based data storage
-📈 Machine Learning for predicting high-risk areas
+Render Free instances use an ephemeral filesystem, so SQLite here is appropriate for a final-year demonstration but is not durable storage across every restart or redeploy.
+
+The service can be linked to main with automatic redeploys on push.
+
+## Local run
+
+Install Python 3.11 or newer.
+
+Run:
+
+1. pip install -r requirements.txt
+2. uvicorn backend:app --reload
+3. Open http://127.0.0.1:8000
+
+Health endpoint: http://127.0.0.1:8000/healthz
+
+Demo administrator:
+
+- username: admin
+- password: admin123
+
+For any public or long-lived deployment, set ADMIN_PASSWORD to a strong secret.
+
+## API surface
+
+GET /healthz
+GET /api/config
+POST /api/auth/register
+POST /api/auth/login
+GET /api/auth/me
+GET /api/categories
+GET /api/reports
+GET /api/reports/{id}
+POST /api/reports
+PATCH /api/reports/{id} (admin)
+POST /api/reports/{id}/upvote
+DELETE /api/reports/{id} (admin)
+GET /api/analytics/stats
+GET /api/notifications
+POST /api/notifications/{id}/read
+POST /api/notifications/clear
+GET /api/users (admin)
+PATCH /api/users/{id}/role (admin)
+PATCH /api/users/{id}/status (admin)
+GET /api/tracking
+POST /api/tracking
+DELETE /api/tracking/{vessel_id}
+GET /api/weather
+GET /api/marine
+
+## Operational workflow for the project defense
+
+1. Open Dashboard.
+2. Inspect live modelled marine conditions.
+3. Open Report Hazard.
+4. Press Use my location to capture device GPS.
+5. Submit an observed hazard with a severity and optional image.
+6. Verify that the report appears in the feed and map.
+7. Open Control Room and sign in.
+8. Change the report from Pending to Verified.
+9. Open Analytics and show that the totals changed.
+10. Open Live Map, enter a vessel call sign and enable tracking.
+11. Show the moving live position and Google Maps hand-off link.
+
+## Auditing discipline
+
+For meaningful repository changes, the intended engineering loop is:
+
+- inspect the current main tree
+- make an atomic change
+- fetch the resulting files back from main
+- run consistency checks
+- run Python compile and pytest
+- inspect GitHub Actions status
+- fix any mismatch and repeat
+
+## Known limitations
+
+1. Render Free can sleep after inactivity.
+2. Render Free storage is ephemeral; the SQLite database is not a permanent production database.
+3. OpenStreetMap standard tiles are a community tile service with usage rules and best-effort availability. Keep visible attribution and do not bulk-download tiles.
+4. Open-Meteo free access is non-commercial and rate-limited.
+5. Browser geolocation and live tracking require explicit end-user permission.
+6. Live tracking is designed for demonstration and cooperative reporting, not authenticated maritime telemetry.
+7. Modelled weather and marine conditions are informative and must not be treated as official safety or navigation instructions.
+
+## Attribution
+
+Keep OpenStreetMap attribution visible in the map and Open-Meteo attribution in the product documentation/footer when deploying.
