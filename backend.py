@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import hmac
+import logging
 import os
 import re
 import time
@@ -46,6 +47,7 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 APP_SECRET = os.getenv("APP_SECRET", "oceanwatch-development-secret-change-me")
+LOGGER = logging.getLogger("oceanguard.external")
 TOKEN_TTL_SECONDS = 24 * 60 * 60
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 EXTERNAL_CACHE: dict[str, tuple[float, dict]] = {}
@@ -1044,6 +1046,7 @@ async def get_weather(latitude: float = Query(...), longitude: float = Query(...
             "current": payload.get("current", {}),
         }
     except httpx.HTTPError as exc:
+        LOGGER.exception("Open-Meteo weather request failed: %s", exc)
         raise HTTPException(
             status_code=502,
             detail="Weather provider unavailable",
