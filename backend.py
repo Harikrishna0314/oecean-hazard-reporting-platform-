@@ -1069,7 +1069,7 @@ async def get_marine(latitude: float = Query(...), longitude: float = Query(...)
 
     try:
         payload = await fetch_open_meteo(
-            "https://api.open-meteo.com/v1/marine",
+            "https://marine-api.open-meteo.com/v1/marine",
             params,
             "marine:" + str(round(latitude, 2)) + ":" + str(round(longitude, 2)),
         )
