@@ -1,7 +1,10 @@
 
 import hashlib
+import hmac
 import os
+import secrets
 import sqlite3
+
 from datetime import datetime, timedelta, timezone
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -20,8 +23,39 @@ def get_db_connection():
     return conn
 
 
+PASSWORD_ITERATIONS = 310000
+
+
 def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt,
+        PASSWORD_ITERATIONS,
+    )
+    return "pbkdf2_sha256$" + str(PASSWORD_ITERATIONS) + "$" + salt.hex() + "$" + digest.hex()
+
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    if not stored_hash:
+        return False
+
+    if stored_hash.startswith("pbkdf2_sha256$"):
+        try:
+            _, iterations_text, salt_hex, digest_hex = stored_hash.split("$", 3)
+            digest = hashlib.pbkdf2_hmac(
+                "sha256",
+                password.encode("utf-8"),
+                bytes.fromhex(salt_hex),
+                int(iterations_text),
+            )
+            return hmac.compare_digest(digest.hex(), digest_hex)
+        except (ValueError, TypeError):
+            return False
+
+    legacy = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return hmac.compare_digest(legacy, stored_hash)
 
 
 def ensure_column(cursor, table: str, column: str, definition: str) -> None:

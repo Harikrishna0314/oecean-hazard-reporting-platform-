@@ -27,7 +27,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import database
-from database import get_db_connection, hash_password
+from database import get_db_connection, hash_password, verify_password
 
 database.init_db()
 
@@ -294,28 +294,38 @@ def login(data: LoginSchema):
     conn = get_db_connection()
     user = conn.execute(
         """
-        SELECT id, username, email, role, full_name, status
+        SELECT id, username, email, role, full_name, status, password_hash
         FROM users
-        WHERE (lower(username) = lower(?) OR lower(email) = ?)
-          AND password_hash = ?
+        WHERE lower(username) = lower(?) OR lower(email) = ?
         """,
-        (
-            data.login.strip(),
-            data.login.strip().lower(),
-            hash_password(data.password),
-        ),
+        (data.login.strip(), data.login.strip().lower()),
     ).fetchone()
-    conn.close()
 
-    if not user:
+    if not user or not verify_password(data.password, user["password_hash"]):
+        conn.close()
         raise HTTPException(status_code=401, detail="Invalid username/email or password")
+
+    if len(user["password_hash"]) == 64 and "$" not in user["password_hash"]:
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (hash_password(data.password), user["id"]),
+        )
+        conn.commit()
+    conn.close()
     if user["status"] != "active":
         raise HTTPException(status_code=403, detail="Account is not active")
 
     return {
         "message": "Login successful",
         "token": issue_token(user["id"], user["username"]),
-        "user": dict(user),
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "email": user["email"],
+            "role": user["role"],
+            "full_name": user["full_name"],
+            "status": user["status"],
+        },
     }
 
 

@@ -26,3 +26,17 @@ jobs:
 
       - name: Run tests
         run: pytest -q
+
+      - name: Validate frontend JavaScript
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("static/index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.S)
+          if not scripts:
+              raise SystemExit("No inline JavaScript found")
+          Path("/tmp/oceanguard-app.js").write_text(scripts[-1], encoding="utf-8")
+          PY
+          node --check /tmp/oceanguard-app.js
