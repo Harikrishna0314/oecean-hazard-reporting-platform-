@@ -244,6 +244,10 @@ def get_config():
         "data_sources": [
             {"name": "Open-Meteo Weather", "url": "https://open-meteo.com/"},
             {
+                "name": "MET Norway Weather Fallback",
+                "url": "https://api.met.no/",
+            },
+            {
                 "name": "Open-Meteo Marine",
                 "url": "https://open-meteo.com/en/docs/marine-weather-api",
             },
