@@ -76,7 +76,7 @@
       <div class="alert-box safe">Community reports are stored immediately, then move through Pending → Verified → Resolved in the Control Room.</div>
       <div class="alert-box warn">Weather and marine panels are model data. They are not official emergency alerts or navigation advice.</div>
       <div class="alert-box warn">Live vessel sharing is opt-in. The browser asks for location permission and the map hides stale positions after the cutoff.</div>
-      <div class="alert-box safe">Zero-cost stack: Leaflet + OpenStreetMap, Open-Meteo and Render Free. No Google Maps JavaScript API key is required.</div>
+      <div class="alert-box safe">Zero-cost stack: Leaflet + OpenStreetMap, Open-Meteo, MET Norway fallback and Render Free. No paid weather API is required.</div>
     </div></div></article>
   </div>
 </section>
@@ -116,7 +116,7 @@
   <div class="analytics-grid"><article class="card"><div class="card-header"><div><div class="card-title">7-day reporting trend</div><div class="card-subtitle">Counts from the same report database powering the dashboard</div></div></div><div class="card-body"><div class="chart-wrap"><canvas id="trend-chart" role="img" aria-label="Seven day hazard report trend"></canvas></div></div></article>
   <article class="card"><div class="card-header"><div><div class="card-title">Hazards by category</div><div class="card-subtitle">Live distribution</div></div></div><div class="card-body"><div class="ranking" id="category-ranking"></div></div></article></div>
   <div class="analytics-grid"><article class="card"><div class="card-header"><div><div class="card-title">Severity distribution</div><div class="card-subtitle">Pending, verified and resolved are tracked independently</div></div></div><div class="card-body"><div class="chart-wrap"><canvas id="severity-chart" role="img" aria-label="Severity distribution"></canvas></div></div></article>
-  <article class="card"><div class="card-header"><div><div class="card-title">Product health</div><div class="card-subtitle">Useful final-year project defense signals</div></div></div><div class="card-body"><div class="alert-list"><div class="alert-box safe">API health: <strong id="health-api">checking…</strong></div><div class="alert-box safe">Data freshness: <strong id="health-data">checking…</strong></div><div class="alert-box safe">Map engine: Leaflet + OpenStreetMap</div><div class="alert-box safe">Marine/weather provider: Open-Meteo, no API key</div><div class="alert-box warn">Render Free storage is ephemeral; durable multi-user persistence requires a separate database service.</div></div></div></article></div>
+  <article class="card"><div class="card-header"><div><div class="card-title">Product health</div><div class="card-subtitle">Useful final-year project defense signals</div></div></div><div class="card-body"><div class="alert-list"><div class="alert-box safe">API health: <strong id="health-api">checking…</strong></div><div class="alert-box safe">Data freshness: <strong id="health-data">checking…</strong></div><div class="alert-box safe">Map engine: Leaflet + OpenStreetMap</div><div class="alert-box safe">Marine provider: Open-Meteo · Weather: Open-Meteo with MET Norway fallback</div><div class="alert-box warn">Render Free storage is ephemeral; durable multi-user persistence requires a separate database service.</div></div></div></article></div>
 </section>
 
 <section class="panel" id="admin-panel">
